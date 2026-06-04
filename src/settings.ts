@@ -1,0 +1,210 @@
+import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
+import { t } from './i18n';
+import type SelectionTranslatorPlugin from './main';
+
+export interface SelectionTranslatorSettings {
+	apiBaseUrl: string;
+	apiKey: string;
+	model: string;
+	targetLanguage: string;
+	prompt: string;
+	temperature: number;
+	maxSelectionLength: number;
+	showSelectedTextInPopover: boolean;
+}
+
+export const DEFAULT_PROMPT =
+	'Translate the user text into {targetLanguage}. Output only the translated text. Preserve Markdown formatting, code blocks, URLs, proper nouns, terminology, line breaks, and punctuation. Do not explain, summarize, or add commentary.';
+
+export const DEFAULT_SETTINGS: SelectionTranslatorSettings = {
+	apiBaseUrl: 'https://api.openai.com/v1',
+	apiKey: '',
+	model: '',
+	targetLanguage: 'Chinese (Simplified)',
+	prompt: DEFAULT_PROMPT,
+	temperature: 0.2,
+	maxSelectionLength: 4000,
+	showSelectedTextInPopover: true,
+};
+
+export class SelectionTranslatorSettingTab extends PluginSettingTab {
+	plugin: SelectionTranslatorPlugin;
+
+	constructor(app: App, plugin: SelectionTranslatorPlugin) {
+		super(app, plugin);
+		this.plugin = plugin;
+	}
+
+	display(): void {
+		const { containerEl } = this;
+
+		containerEl.empty();
+
+		new Setting(containerEl)
+			.setName(t('settingsProviderHeading'))
+			.setDesc(t('settingsProviderDesc'));
+
+		new Setting(containerEl)
+			.setName(t('settingsApiBaseUrlName'))
+			.setDesc(t('settingsApiBaseUrlDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(DEFAULT_SETTINGS.apiBaseUrl)
+					.setValue(this.plugin.settings.apiBaseUrl)
+					.onChange(async (value) => {
+						this.plugin.settings.apiBaseUrl = value.trim();
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsApiKeyName'))
+			.setDesc(t('settingsApiKeyDesc'))
+			.addText((text) => {
+				text.inputEl.type = 'password';
+				text
+					.setPlaceholder(t('settingsApiKeyPlaceholder'))
+					.setValue(this.plugin.settings.apiKey)
+					.onChange(async (value) => {
+						this.plugin.settings.apiKey = value.trim();
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName(t('settingsModelName'))
+			.setDesc(t('settingsModelDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(t('settingsModelPlaceholder'))
+					.setValue(this.plugin.settings.model)
+					.onChange(async (value) => {
+						this.plugin.settings.model = value.trim();
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsTestName'))
+			.setDesc(t('settingsTestDesc'))
+			.addButton((button) => {
+				button
+					.setButtonText(t('settingsTestButton'))
+					.onClick(async () => {
+						button.buttonEl.disabled = true;
+						button.setButtonText(t('settingsTestingButton'));
+						try {
+							await this.plugin.testApiConfiguration();
+							new Notice(t('settingsTestSucceeded'));
+						} catch (error) {
+							new Notice(
+								t('settingsTestFailed', {
+									message: getErrorMessage(error),
+								}),
+							);
+						} finally {
+							button.setButtonText(t('settingsTestButton'));
+							button.buttonEl.disabled = false;
+						}
+					});
+			});
+
+		new Setting(containerEl)
+			.setName(t('settingsTargetLanguageName'))
+			.setDesc(t('settingsTargetLanguageDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(DEFAULT_SETTINGS.targetLanguage)
+					.setValue(this.plugin.settings.targetLanguage)
+					.onChange(async (value) => {
+						this.plugin.settings.targetLanguage =
+							value.trim() || DEFAULT_SETTINGS.targetLanguage;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsPromptName'))
+			.setDesc(t('settingsPromptDesc'))
+			.addTextArea((text) => {
+				text.inputEl.rows = 5;
+				text.inputEl.classList.add('selection-translator-settings-prompt');
+				text
+					.setValue(this.plugin.settings.prompt)
+					.onChange(async (value) => {
+						this.plugin.settings.prompt = value.trim() || DEFAULT_PROMPT;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName(t('settingsTemperatureName'))
+			.setDesc(t('settingsTemperatureDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(String(DEFAULT_SETTINGS.temperature))
+					.setValue(String(this.plugin.settings.temperature))
+					.onChange(async (value) => {
+						this.plugin.settings.temperature = normalizeNumber(
+							value,
+							DEFAULT_SETTINGS.temperature,
+							0,
+							2,
+						);
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsMaxSelectionLengthName'))
+			.setDesc(t('settingsMaxSelectionLengthDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(String(DEFAULT_SETTINGS.maxSelectionLength))
+					.setValue(String(this.plugin.settings.maxSelectionLength))
+					.onChange(async (value) => {
+						this.plugin.settings.maxSelectionLength = Math.round(
+							normalizeNumber(
+								value,
+								DEFAULT_SETTINGS.maxSelectionLength,
+								1,
+								100000,
+							),
+						);
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsShowSelectedTextName'))
+			.setDesc(t('settingsShowSelectedTextDesc'))
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showSelectedTextInPopover)
+					.onChange(async (value) => {
+						this.plugin.settings.showSelectedTextInPopover = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+	}
+}
+
+function normalizeNumber(
+	value: string,
+	fallback: number,
+	min: number,
+	max: number,
+) {
+	const parsed = Number(value);
+	if (!Number.isFinite(parsed)) {
+		return fallback;
+	}
+	return Math.min(Math.max(parsed, min), max);
+}
+
+function getErrorMessage(error: unknown): string {
+	if (error instanceof Error) {
+		return error.message;
+	}
+	return String(error);
+}
