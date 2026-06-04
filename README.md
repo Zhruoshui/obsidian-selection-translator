@@ -1,5 +1,7 @@
 # Selection Translator
 
+[中文说明](README.zh-CN.md)
+
 Selection Translator is an Obsidian community plugin that translates selected Markdown editor or PDF text with an OpenAI-compatible Chat API provider.
 
 ## Features
