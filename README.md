@@ -100,7 +100,7 @@ The repository is configured to create a GitHub release when a version tag is pu
 For the first `1.0.0` release from an already versioned commit:
 
 ```bash
-git tag 1.0.0
+git tag -a 1.0.0 -m "1.0.0"
 git push origin main --follow-tags
 ```
 
