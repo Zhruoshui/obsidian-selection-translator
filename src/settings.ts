@@ -6,29 +6,53 @@ export interface SelectionTranslatorSettings {
 	apiBaseUrl: string;
 	apiKey: string;
 	model: string;
+	sourceLanguage: string;
 	targetLanguage: string;
 	prompt: string;
 	temperature: number;
 	maxSelectionLength: number;
 	showSelectedTextInPopover: boolean;
+	showLanguageControlsInPopover: boolean;
 }
 
-export const DEFAULT_PROMPT =
+export const LEGACY_DEFAULT_PROMPT =
 	'Translate the user text into {targetLanguage}. Output only the translated text. Preserve Markdown formatting, code blocks, URLs, proper nouns, terminology, line breaks, and punctuation. Do not explain, summarize, or add commentary.';
+
+export const DEFAULT_PROMPT =
+	'Translate the user text from {sourceLanguage} into {targetLanguage}. Output only the translated text. Preserve Markdown formatting, code blocks, URLs, proper nouns, terminology, line breaks, and punctuation. Do not explain, summarize, or add commentary.';
 
 export const DEFAULT_SETTINGS: SelectionTranslatorSettings = {
 	apiBaseUrl: 'https://api.openai.com/v1',
 	apiKey: '',
 	model: '',
+	sourceLanguage: 'Auto',
 	targetLanguage: 'Chinese (Simplified)',
 	prompt: DEFAULT_PROMPT,
 	temperature: 0.2,
 	maxSelectionLength: 4000,
 	showSelectedTextInPopover: true,
+	showLanguageControlsInPopover: true,
 };
+
+type SettingsTabId = 'provider' | 'translation' | 'popover' | 'advanced';
+
+const SETTINGS_TABS: Array<{
+	id: SettingsTabId;
+	labelKey:
+		| 'settingsTabProvider'
+		| 'settingsTabTranslation'
+		| 'settingsTabPopover'
+		| 'settingsTabAdvanced';
+}> = [
+	{ id: 'provider', labelKey: 'settingsTabProvider' },
+	{ id: 'translation', labelKey: 'settingsTabTranslation' },
+	{ id: 'popover', labelKey: 'settingsTabPopover' },
+	{ id: 'advanced', labelKey: 'settingsTabAdvanced' },
+];
 
 export class SelectionTranslatorSettingTab extends PluginSettingTab {
 	plugin: SelectionTranslatorPlugin;
+	private activeTab: SettingsTabId = 'provider';
 
 	constructor(app: App, plugin: SelectionTranslatorPlugin) {
 		super(app, plugin);
@@ -39,7 +63,56 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 
 		containerEl.empty();
+		containerEl.classList.add('selection-translator-settings');
 
+		const tabsEl = containerEl.ownerDocument.createElement('div');
+		tabsEl.className = 'selection-translator-settings__tabs';
+		tabsEl.setAttribute('role', 'tablist');
+
+		for (const tab of SETTINGS_TABS) {
+			const tabButton = containerEl.ownerDocument.createElement('button');
+			tabButton.type = 'button';
+			tabButton.className = 'selection-translator-settings__tab';
+			tabButton.textContent = t(tab.labelKey);
+			tabButton.setAttribute('role', 'tab');
+			tabButton.setAttribute(
+				'aria-selected',
+				String(tab.id === this.activeTab),
+			);
+			if (tab.id === this.activeTab) {
+				tabButton.classList.add('selection-translator-settings__tab--active');
+			}
+			tabButton.addEventListener('click', () => {
+				this.activeTab = tab.id;
+				this.display();
+			});
+			tabsEl.appendChild(tabButton);
+		}
+
+		containerEl.appendChild(tabsEl);
+
+		const panelEl = containerEl.ownerDocument.createElement('div');
+		panelEl.className = 'selection-translator-settings__panel';
+		panelEl.setAttribute('role', 'tabpanel');
+		containerEl.appendChild(panelEl);
+
+		switch (this.activeTab) {
+			case 'provider':
+				this.renderProviderSettings(panelEl);
+				return;
+			case 'translation':
+				this.renderTranslationSettings(panelEl);
+				return;
+			case 'popover':
+				this.renderPopoverSettings(panelEl);
+				return;
+			case 'advanced':
+				this.renderAdvancedSettings(panelEl);
+				return;
+		}
+	}
+
+	private renderProviderSettings(containerEl: HTMLElement) {
 		new Setting(containerEl)
 			.setName(t('settingsProviderHeading'))
 			.setDesc(t('settingsProviderDesc'));
@@ -108,6 +181,22 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 						}
 					});
 			});
+	}
+
+	private renderTranslationSettings(containerEl: HTMLElement) {
+		new Setting(containerEl)
+			.setName(t('settingsSourceLanguageName'))
+			.setDesc(t('settingsSourceLanguageDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(DEFAULT_SETTINGS.sourceLanguage)
+					.setValue(this.plugin.settings.sourceLanguage)
+					.onChange(async (value) => {
+						this.plugin.settings.sourceLanguage =
+							value.trim() || DEFAULT_SETTINGS.sourceLanguage;
+						await this.plugin.saveSettings();
+					}),
+			);
 
 		new Setting(containerEl)
 			.setName(t('settingsTargetLanguageName'))
@@ -136,7 +225,9 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
+	}
 
+	private renderAdvancedSettings(containerEl: HTMLElement) {
 		new Setting(containerEl)
 			.setName(t('settingsTemperatureName'))
 			.setDesc(t('settingsTemperatureDesc'))
@@ -174,7 +265,9 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
+	}
 
+	private renderPopoverSettings(containerEl: HTMLElement) {
 		new Setting(containerEl)
 			.setName(t('settingsShowSelectedTextName'))
 			.setDesc(t('settingsShowSelectedTextDesc'))
@@ -183,6 +276,18 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.showSelectedTextInPopover)
 					.onChange(async (value) => {
 						this.plugin.settings.showSelectedTextInPopover = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsShowLanguageControlsName'))
+			.setDesc(t('settingsShowLanguageControlsDesc'))
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showLanguageControlsInPopover)
+					.onChange(async (value) => {
+						this.plugin.settings.showLanguageControlsInPopover = value;
 						await this.plugin.saveSettings();
 					}),
 			);

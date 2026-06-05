@@ -8,6 +8,7 @@ import { t } from './i18n';
 import { OpenAICompatibleChatService } from './services/openAICompatibleChat';
 import {
 	DEFAULT_SETTINGS,
+	LEGACY_DEFAULT_PROMPT,
 	SelectionTranslatorSettingTab,
 	SelectionTranslatorSettings,
 } from './settings';
@@ -41,6 +42,9 @@ export default class SelectionTranslatorPlugin extends Plugin {
 				this.stopCurrentTranslation();
 				this.lastTranslatedSelection = '';
 			},
+			(sourceLanguage, targetLanguage) => {
+				void this.updateLanguageSettings(sourceLanguage, targetLanguage);
+			},
 		);
 
 		registerSelectionTranslationCommands(this);
@@ -61,6 +65,9 @@ export default class SelectionTranslatorPlugin extends Plugin {
 			DEFAULT_SETTINGS,
 			(await this.loadData()) as Partial<SelectionTranslatorSettings>,
 		);
+		if (this.settings.prompt === LEGACY_DEFAULT_PROMPT) {
+			this.settings.prompt = DEFAULT_SETTINGS.prompt;
+		}
 	}
 
 	async saveSettings() {
@@ -90,7 +97,7 @@ export default class SelectionTranslatorPlugin extends Plugin {
 
 		if (!this.popover.isOpen()) {
 			this.lastTranslatedSelection = '';
-			this.popover.showIdle();
+			this.popover.showIdle(this.getPopoverOptions());
 		}
 	}
 
@@ -158,7 +165,31 @@ export default class SelectionTranslatorPlugin extends Plugin {
 	private getPopoverOptions() {
 		return {
 			showSelectedText: this.settings.showSelectedTextInPopover,
+			showLanguageControls: this.settings.showLanguageControlsInPopover,
+			sourceLanguage: this.settings.sourceLanguage,
+			targetLanguage: this.settings.targetLanguage,
 		};
+	}
+
+	private async updateLanguageSettings(
+		sourceLanguage: string,
+		targetLanguage: string,
+	) {
+		const normalizedSource =
+			sourceLanguage.trim() || DEFAULT_SETTINGS.sourceLanguage;
+		const normalizedTarget =
+			targetLanguage.trim() || DEFAULT_SETTINGS.targetLanguage;
+
+		if (
+			this.settings.sourceLanguage === normalizedSource &&
+			this.settings.targetLanguage === normalizedTarget
+		) {
+			return;
+		}
+
+		this.settings.sourceLanguage = normalizedSource;
+		this.settings.targetLanguage = normalizedTarget;
+		await this.saveSettings();
 	}
 
 	private scheduleOpenPopoverSelectionTranslation() {

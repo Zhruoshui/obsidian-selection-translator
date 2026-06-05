@@ -1,6 +1,9 @@
 import { requestUrl } from 'obsidian';
 import { t } from '../i18n';
-import type { SelectionTranslatorSettings } from '../settings';
+import {
+	DEFAULT_SETTINGS,
+	type SelectionTranslatorSettings,
+} from '../settings';
 
 interface ChatMessage {
 	role: 'system' | 'user';
@@ -162,10 +165,35 @@ function buildTestRequestBody(
 }
 
 function buildPrompt(settings: SelectionTranslatorSettings) {
-	return settings.prompt.replaceAll(
-		'{targetLanguage}',
-		settings.targetLanguage,
-	);
+	const sourceLanguage = getPromptSourceLanguage(settings.sourceLanguage);
+	const targetLanguage =
+		settings.targetLanguage.trim() || DEFAULT_SETTINGS.targetLanguage;
+	const missingDirectives: string[] = [];
+
+	if (!settings.prompt.includes('{sourceLanguage}')) {
+		missingDirectives.push(`Source language: ${sourceLanguage}`);
+	}
+	if (!settings.prompt.includes('{targetLanguage}')) {
+		missingDirectives.push(`Target language: ${targetLanguage}`);
+	}
+
+	const prompt = settings.prompt
+		.replaceAll('{sourceLanguage}', sourceLanguage)
+		.replaceAll('{targetLanguage}', targetLanguage);
+
+	if (missingDirectives.length === 0) {
+		return prompt;
+	}
+
+	return `${missingDirectives.join('\n')}\n\n${prompt}`;
+}
+
+function getPromptSourceLanguage(sourceLanguage: string) {
+	const normalized = sourceLanguage.trim();
+	if (!normalized || normalized.toLowerCase() === 'auto') {
+		return 'the auto-detected source language';
+	}
+	return normalized;
 }
 
 function buildHeaders(settings: SelectionTranslatorSettings) {
