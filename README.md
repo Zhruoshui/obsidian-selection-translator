@@ -11,7 +11,7 @@
 [FAQ](#faq) |
 [Development](#development)
 
-Selection Translator is an Obsidian plugin for translating selected Markdown editor and PDF text with selectable AI, traditional translation, and dictionary providers.
+Selection Translator is an Obsidian plugin for translating selected Markdown editor and PDF text with selectable AI and traditional translation providers plus automatic dictionary lookup.
 
 ---
 
@@ -22,7 +22,7 @@ Selection Translator is an Obsidian plugin for translating selected Markdown edi
 - Translate selected Markdown editor or selectable PDF text from the command palette, a hotkey, the ribbon button, or the Markdown editor context menu.
 - Keep the floating popover open while selecting more text; the new Markdown or PDF selection is translated automatically.
 - Edit the selected source text in the popover and translate again.
-- Use the dictionary provider to look up one selected English word and play UK/US pronunciations.
+- Automatically look up one selected English word and play UK/US pronunciations.
 
 ### Language Controls
 
@@ -40,10 +40,10 @@ Selection Translator is an Obsidian plugin for translating selected Markdown edi
 
 ### Provider Support
 
-- Choose the translation provider yourself. OpenAI-compatible providers, Bing Translate (Microsoft Translator), Google Cloud Translation, DeepL, Baidu Translate, Youdao Translate, and Dictionary are peer options.
+- Choose the text translation provider yourself. OpenAI-compatible providers, Bing Translate (Microsoft Translator), Google Cloud Translation, DeepL, Baidu Translate, and Youdao Translate are selectable options.
 - Configure the credentials required by the selected provider.
 - OpenAI-compatible providers support prompt, temperature, and streaming output. Traditional translation APIs return the translated result when the provider request completes.
-- The Dictionary provider uses Dict.cn for selected English words and does not require an API key.
+- One selected English word automatically uses Dict.cn dictionary lookup and does not require an API key.
 - Test the provider configuration before translating.
 - Plugin UI follows Obsidian's app language for English and Simplified Chinese.
 
@@ -72,7 +72,7 @@ The settings page is grouped into **Provider**, **Translation**, **Popover**, an
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| Translation provider | `OpenAI-compatible` | Selects which provider handles translation requests. |
+| Translation provider | `OpenAI-compatible` | Selects which provider handles non-dictionary translation requests. |
 | OpenAI-compatible API base URL | `https://api.openai.com/v1` | Provider base URL. The plugin appends `/chat/completions` when needed. |
 | OpenAI-compatible API key | empty | Bearer token for the configured OpenAI-compatible provider. |
 | OpenAI-compatible model | empty | Model name supported by your provider. |
@@ -86,14 +86,13 @@ The settings page is grouped into **Provider**, **Translation**, **Popover**, an
 | Baidu Translate secret key | empty | Secret key from Baidu Translate Open Platform. |
 | Youdao Translate app key | empty | App key from Youdao Zhiyun translation service. |
 | Youdao Translate app secret | empty | App secret from Youdao Zhiyun translation service. |
-| Dictionary lookup | none | Looks up one selected English word with Dict.cn and shows UK/US pronunciation buttons. |
 | Test API configuration | - | Sends a short translation request to verify the selected provider configuration. |
 
 The public Google Translate and Bing Translator websites can be free for manual
 use, but this plugin uses official provider APIs for those translation
 providers. API access requires provider credentials even when the provider
-offers a free quota or free tier. The Dictionary provider is separate and uses
-Dict.cn lookup without API credentials.
+offers a free quota or free tier. Dictionary lookup is automatic for one
+selected English word and uses Dict.cn without API credentials.
 
 | Provider | API access note | Key setup | Pricing |
 | --- | --- | --- | --- |
@@ -102,7 +101,7 @@ Dict.cn lookup without API credentials.
 | DeepL | Requires a DeepL API account and Auth Key. Use `https://api-free.deepl.com` for API Free and `https://api.deepl.com` for API Pro. | [DeepL API authentication](https://developers.deepl.com/docs/getting-started/auth) | [DeepL API plans](https://www.deepl.com/pro-api) |
 | Baidu Translate | Requires a Baidu Translate Open Platform App ID and secret key. | [Baidu Translate API docs](https://fanyi-api.baidu.com/doc/21), [Open Platform](https://fanyi-api.baidu.com/) | [Baidu Translate products](https://fanyi-api.baidu.com/product/11) |
 | Youdao Translate | Requires a Youdao Zhiyun app key and app secret. | [Youdao new user guide](https://ai.youdao.com/doc.s#guide), [App management](https://ai.youdao.com/appmgr.s), [Text translation API docs](https://ai.youdao.com/DOCSIRMA/html/trans/api/wbfy/index.html) | [Youdao text translation pricing](https://ai.youdao.com/DOCSIRMA/html/trans/price/wbfy/index.html) |
-| Dictionary | No API key is required. It sends the selected word to Dict.cn lookup and uses Dict.cn pronunciation audio URLs. | [Dict.cn](https://dict.cn/) | - |
+| Dictionary lookup | No API key is required. It sends one selected English word to Dict.cn lookup and uses Dict.cn pronunciation audio URLs. | [Dict.cn](https://dict.cn/) | - |
 
 ### Translation
 
@@ -139,10 +138,9 @@ Dict.cn lookup without API credentials.
 
 ### Dictionary Lookup
 
-1. Choose **Dictionary (English word)** as the translation provider.
-2. Select one English word in Markdown or a selectable PDF text layer.
-3. Run **Translate selection**.
-4. Use the pronunciation buttons in the result header to play UK or US audio.
+1. Select one English word in Markdown or a selectable PDF text layer.
+2. Run **Translate selection**.
+3. Use the pronunciation buttons in the result header to play UK or US audio.
 
 ### Popover Language Direction
 
@@ -163,7 +161,7 @@ PDF support requires a selectable PDF text layer. Scanned pages without OCR text
 
 This plugin does not collect telemetry and does not scan your vault.
 
-When you translate selected Markdown or PDF text, only the selected text is sent to the translation provider currently selected in plugin settings. For the Dictionary provider, the selected word is sent to Dict.cn and pronunciation audio is loaded from Dict.cn. Do not translate sensitive content unless you trust that provider.
+When you translate selected Markdown or PDF text, only the selected text is sent to the translation provider currently selected in plugin settings. When the selection is one English word, that word is sent to Dict.cn and pronunciation audio is loaded from Dict.cn instead. Do not translate sensitive content unless you trust that provider.
 
 Provider credentials are stored locally in Obsidian plugin data through `saveData()`. Secret fields are rendered as password fields in settings, but Obsidian plugin data is local plaintext storage, not encrypted storage. The plugin does not log provider credentials.
 

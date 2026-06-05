@@ -6,6 +6,8 @@ import {
 } from '../settings';
 import {
 	getProviderLanguageCode,
+	resolveTextTranslationProvider,
+	type TextTranslationProviderId,
 	type TranslationProviderId,
 } from './languageCodes';
 import { OpenAICompatibleChatService } from './openAICompatibleChat';
@@ -27,7 +29,35 @@ export class TranslationService {
 		settings: SelectionTranslatorSettings,
 		options: TranslationRequestOptions = {},
 	) {
-		switch (settings.provider) {
+		if (isDictionaryLookupText(text)) {
+			return translateWithDictionary(text);
+		}
+
+		return this.translateWithProvider(
+			text,
+			resolveTextTranslationProvider(settings.provider),
+			settings,
+			options,
+		);
+	}
+
+	async testConnection(settings: SelectionTranslatorSettings) {
+		const provider = resolveTextTranslationProvider(settings.provider);
+		if (provider === 'openai') {
+			await this.openAI.testConnection(settings);
+			return;
+		}
+
+		await this.translateWithProvider('Hello', provider, settings);
+	}
+
+	private translateWithProvider(
+		text: string,
+		provider: TextTranslationProviderId,
+		settings: SelectionTranslatorSettings,
+		options: TranslationRequestOptions = {},
+	) {
+		switch (provider) {
 			case 'openai':
 				return this.openAI.translate(text, settings, options);
 			case 'microsoft':
@@ -40,18 +70,7 @@ export class TranslationService {
 				return translateWithBaidu(text, settings);
 			case 'youdao':
 				return translateWithYoudao(text, settings);
-			case 'dictionary':
-				return translateWithDictionary(text);
 		}
-	}
-
-	async testConnection(settings: SelectionTranslatorSettings) {
-		if (settings.provider === 'openai') {
-			await this.openAI.testConnection(settings);
-			return;
-		}
-
-		await this.translate('Hello', settings);
 	}
 }
 
@@ -311,6 +330,10 @@ async function translateWithDictionary(text: string): Promise<TranslationResult>
 	return result;
 }
 
+function isDictionaryLookupText(text: string) {
+	return getDictionaryLookupWord(text) !== undefined;
+}
+
 function requireSetting(value: string, fieldName: string) {
 	const trimmed = value.trim();
 	if (!trimmed) {
@@ -439,9 +462,17 @@ function getProviderError(json: unknown, text: string) {
 }
 
 function normalizeDictionaryWord(text: string) {
+	const word = getDictionaryLookupWord(text);
+	if (word === undefined) {
+		throw new Error(t('dictionaryOnlyEnglishWord'));
+	}
+	return word;
+}
+
+function getDictionaryLookupWord(text: string) {
 	const word = text.trim().replace(/^[^A-Za-z]+|[^A-Za-z]+$/g, '');
 	if (!/^[A-Za-z]+(?:[-'][A-Za-z]+)*$/.test(word)) {
-		throw new Error(t('dictionaryOnlyEnglishWord'));
+		return undefined;
 	}
 	return word;
 }

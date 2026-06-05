@@ -7,6 +7,23 @@ export type TranslationProviderId =
 	| 'youdao'
 	| 'dictionary';
 
+export type TextTranslationProviderId = Exclude<
+	TranslationProviderId,
+	'dictionary'
+>;
+
+export const DEFAULT_TEXT_TRANSLATION_PROVIDER: TextTranslationProviderId =
+	'openai';
+
+export function resolveTextTranslationProvider(
+	provider: TranslationProviderId,
+): TextTranslationProviderId {
+	if (provider === 'dictionary') {
+		return DEFAULT_TEXT_TRANSLATION_PROVIDER;
+	}
+	return provider;
+}
+
 type ProviderLanguageCodes = Record<TranslationProviderId, string>;
 
 interface LanguageCodeEntry {

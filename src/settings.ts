@@ -1,7 +1,12 @@
 import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
 import { t } from './i18n';
 import type SelectionTranslatorPlugin from './main';
-import type { TranslationProviderId } from './services/languageCodes';
+import {
+	DEFAULT_TEXT_TRANSLATION_PROVIDER,
+	resolveTextTranslationProvider,
+	type TextTranslationProviderId,
+	type TranslationProviderId,
+} from './services/languageCodes';
 
 export interface SelectionTranslatorSettings {
 	provider: TranslationProviderId;
@@ -34,7 +39,7 @@ export const DEFAULT_PROMPT =
 	'Translate the user text from {sourceLanguage} into {targetLanguage}. Output only the translated text. Preserve Markdown formatting, code blocks, URLs, proper nouns, terminology, line breaks, and punctuation. Do not explain, summarize, or add commentary.';
 
 export const DEFAULT_SETTINGS: SelectionTranslatorSettings = {
-	provider: 'openai',
+	provider: DEFAULT_TEXT_TRANSLATION_PROVIDER,
 	apiBaseUrl: 'https://api.openai.com/v1',
 	apiKey: '',
 	model: '',
@@ -74,15 +79,14 @@ const SETTINGS_TABS: Array<{
 ];
 
 const TRANSLATION_PROVIDERS: Array<{
-	id: TranslationProviderId;
+	id: TextTranslationProviderId;
 	labelKey:
 		| 'settingsProviderOpenAI'
 		| 'settingsProviderMicrosoft'
 		| 'settingsProviderGoogle'
 		| 'settingsProviderDeepL'
 		| 'settingsProviderBaidu'
-		| 'settingsProviderYoudao'
-		| 'settingsProviderDictionary';
+		| 'settingsProviderYoudao';
 }> = [
 	{ id: 'openai', labelKey: 'settingsProviderOpenAI' },
 	{ id: 'microsoft', labelKey: 'settingsProviderMicrosoft' },
@@ -90,7 +94,6 @@ const TRANSLATION_PROVIDERS: Array<{
 	{ id: 'deepl', labelKey: 'settingsProviderDeepL' },
 	{ id: 'baidu', labelKey: 'settingsProviderBaidu' },
 	{ id: 'youdao', labelKey: 'settingsProviderYoudao' },
-	{ id: 'dictionary', labelKey: 'settingsProviderDictionary' },
 ];
 
 export class SelectionTranslatorSettingTab extends PluginSettingTab {
@@ -156,6 +159,10 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 	}
 
 	private renderProviderSettings(containerEl: HTMLElement) {
+		const selectedProvider = resolveTextTranslationProvider(
+			this.plugin.settings.provider,
+		);
+
 		new Setting(containerEl)
 			.setName(t('settingsTranslationProviderName'))
 			.setDesc(t('settingsTranslationProviderDesc'))
@@ -164,15 +171,15 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 					dropdown.addOption(provider.id, t(provider.labelKey));
 				}
 				dropdown
-					.setValue(this.plugin.settings.provider)
+					.setValue(selectedProvider)
 					.onChange(async (value) => {
-						this.plugin.settings.provider = value as TranslationProviderId;
+						this.plugin.settings.provider = value as TextTranslationProviderId;
 						await this.plugin.saveSettings();
 						this.display();
 					});
 			});
 
-		switch (this.plugin.settings.provider) {
+		switch (selectedProvider) {
 			case 'openai':
 				this.renderOpenAIProviderSettings(containerEl);
 				break;
@@ -190,9 +197,6 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 				break;
 			case 'youdao':
 				this.renderYoudaoProviderSettings(containerEl);
-				break;
-			case 'dictionary':
-				this.renderDictionaryProviderSettings(containerEl);
 				break;
 		}
 
@@ -417,12 +421,6 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
-	}
-
-	private renderDictionaryProviderSettings(containerEl: HTMLElement) {
-		new Setting(containerEl)
-			.setName(t('settingsDictionaryProviderName'))
-			.setDesc(t('settingsDictionaryProviderDesc'));
 	}
 
 	private renderTranslationSettings(containerEl: HTMLElement) {

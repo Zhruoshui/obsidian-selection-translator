@@ -6,6 +6,7 @@ import {
 } from './selection/currentSelection';
 import { t } from './i18n';
 import { TranslationService } from './services/translationService';
+import { resolveTextTranslationProvider } from './services/languageCodes';
 import {
 	DEFAULT_SETTINGS,
 	LEGACY_DEFAULT_PROMPT,
@@ -65,8 +66,23 @@ export default class SelectionTranslatorPlugin extends Plugin {
 			DEFAULT_SETTINGS,
 			(await this.loadData()) as Partial<SelectionTranslatorSettings>,
 		);
+		let shouldSaveSettings = false;
+
 		if (this.settings.prompt === LEGACY_DEFAULT_PROMPT) {
 			this.settings.prompt = DEFAULT_SETTINGS.prompt;
+			shouldSaveSettings = true;
+		}
+
+		const textTranslationProvider = resolveTextTranslationProvider(
+			this.settings.provider,
+		);
+		if (textTranslationProvider !== this.settings.provider) {
+			this.settings.provider = textTranslationProvider;
+			shouldSaveSettings = true;
+		}
+
+		if (shouldSaveSettings) {
+			await this.saveSettings();
 		}
 	}
 

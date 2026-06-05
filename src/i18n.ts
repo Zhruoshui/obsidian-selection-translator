@@ -12,20 +12,16 @@ const en = {
 	settingsTabAdvanced: 'Advanced',
 	settingsTranslationProviderName: 'Translation provider',
 	settingsTranslationProviderDesc:
-		'Choose the provider used for new translation requests. All providers are selectable peers.',
+		'Choose the provider used for text translation. One selected English word is looked up in the dictionary automatically.',
 	settingsProviderOpenAI: 'OpenAI-compatible',
 	settingsProviderMicrosoft: 'Bing Translate (Microsoft Translator)',
 	settingsProviderGoogle: 'Google Cloud Translation',
 	settingsProviderDeepL: 'DeepL',
 	settingsProviderBaidu: 'Baidu Translate',
 	settingsProviderYoudao: 'Youdao Translate',
-	settingsProviderDictionary: 'Dictionary (English word)',
 	settingsProviderHeading: 'OpenAI-compatible chat API',
 	settingsProviderDesc:
 		'Selected text is sent to this provider when OpenAI-compatible translation is selected.',
-	settingsDictionaryProviderName: 'Dictionary lookup',
-	settingsDictionaryProviderDesc:
-		'Looks up one selected English word with Dict.cn and shows UK/US pronunciation buttons. No API key is required.',
 	settingsApiBaseUrlName: 'API base URL',
 	settingsApiBaseUrlDesc: 'Base URL for the provider.',
 	settingsApiKeyName: 'API key',
@@ -157,20 +153,16 @@ const zhCN: TranslationDictionary = {
 	settingsTabAdvanced: '高级',
 	settingsTranslationProviderName: '翻译服务商',
 	settingsTranslationProviderDesc:
-		'选择新翻译请求使用的服务商。所有服务商都是同级可选项。',
+		'选择文本翻译使用的服务商。只选择一个英文单词时会自动走词典查询。',
 	settingsProviderOpenAI: 'OpenAI 兼容',
 	settingsProviderMicrosoft: 'Bing 翻译（Microsoft Translator）',
 	settingsProviderGoogle: 'Google 翻译',
 	settingsProviderDeepL: 'DeepL',
 	settingsProviderBaidu: '百度翻译',
 	settingsProviderYoudao: '有道翻译',
-	settingsProviderDictionary: '词典（英文单词）',
 	settingsProviderHeading: 'OpenAI 兼容聊天 API',
 	settingsProviderDesc:
 		'选择 OpenAI 兼容翻译时，选中文本会发送到此服务商。',
-	settingsDictionaryProviderName: '词典查询',
-	settingsDictionaryProviderDesc:
-		'使用 Dict.cn/海词查询一个选中的英文单词，并显示英音/美音发音按钮。不需要 API 密钥。',
 	settingsApiBaseUrlName: 'API 基础 URL',
 	settingsApiBaseUrlDesc: '服务商的基础 URL。',
 	settingsApiKeyName: 'API 密钥',
