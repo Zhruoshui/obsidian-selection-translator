@@ -7,6 +7,7 @@ const en = {
 	noticeSelectionTooLong: 'Selection is too long. Limit: {limit} characters.',
 
 	settingsTabProvider: 'Provider',
+	settingsTabDictionary: 'Dictionary',
 	settingsTabTranslation: 'Translation',
 	settingsTabPopover: 'Popover',
 	settingsTabAdvanced: 'Advanced',
@@ -22,6 +23,12 @@ const en = {
 	settingsProviderHeading: 'OpenAI-compatible chat API',
 	settingsProviderDesc:
 		'Selected text is sent to this provider when OpenAI-compatible translation is selected.',
+	settingsDictionaryProviderName: 'Dictionary provider',
+	settingsDictionaryProviderDesc:
+		'Choose the dictionary service used when one selected English word is looked up automatically.',
+	settingsDictionaryProviderYoudao: 'Youdao Dictionary',
+	settingsDictionaryProviderBing: 'Bing Dictionary',
+	settingsDictionaryProviderCambridge: 'Cambridge Dictionary',
 	settingsApiBaseUrlName: 'API base URL',
 	settingsApiBaseUrlDesc: 'Base URL for the provider.',
 	settingsApiKeyName: 'API key',
@@ -148,6 +155,7 @@ const zhCN: TranslationDictionary = {
 	noticeSelectionTooLong: '选中文本过长。限制：{limit} 个字符。',
 
 	settingsTabProvider: '服务商',
+	settingsTabDictionary: '词典',
 	settingsTabTranslation: '翻译',
 	settingsTabPopover: '悬浮窗',
 	settingsTabAdvanced: '高级',
@@ -163,6 +171,12 @@ const zhCN: TranslationDictionary = {
 	settingsProviderHeading: 'OpenAI 兼容聊天 API',
 	settingsProviderDesc:
 		'选择 OpenAI 兼容翻译时，选中文本会发送到此服务商。',
+	settingsDictionaryProviderName: '词典服务商',
+	settingsDictionaryProviderDesc:
+		'选择只划中一个英文单词时自动查询的词典服务。',
+	settingsDictionaryProviderYoudao: '有道词典',
+	settingsDictionaryProviderBing: '必应词典',
+	settingsDictionaryProviderCambridge: '剑桥词典',
 	settingsApiBaseUrlName: 'API 基础 URL',
 	settingsApiBaseUrlDesc: '服务商的基础 URL。',
 	settingsApiKeyName: 'API 密钥',

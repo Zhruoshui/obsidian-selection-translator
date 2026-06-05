@@ -8,8 +8,26 @@ import {
 	type TranslationProviderId,
 } from './services/languageCodes';
 
+export type DictionaryProviderId = 'youdao' | 'bing' | 'cambridge';
+
+export const DEFAULT_DICTIONARY_PROVIDER: DictionaryProviderId = 'youdao';
+
+export function resolveDictionaryProvider(
+	provider: unknown,
+): DictionaryProviderId {
+	switch (provider) {
+		case 'youdao':
+		case 'bing':
+		case 'cambridge':
+			return provider;
+		default:
+			return DEFAULT_DICTIONARY_PROVIDER;
+	}
+}
+
 export interface SelectionTranslatorSettings {
 	provider: TranslationProviderId;
+	dictionaryProvider: DictionaryProviderId;
 	apiBaseUrl: string;
 	apiKey: string;
 	model: string;
@@ -40,6 +58,7 @@ export const DEFAULT_PROMPT =
 
 export const DEFAULT_SETTINGS: SelectionTranslatorSettings = {
 	provider: DEFAULT_TEXT_TRANSLATION_PROVIDER,
+	dictionaryProvider: DEFAULT_DICTIONARY_PROVIDER,
 	apiBaseUrl: 'https://api.openai.com/v1',
 	apiKey: '',
 	model: '',
@@ -62,17 +81,24 @@ export const DEFAULT_SETTINGS: SelectionTranslatorSettings = {
 	showLanguageControlsInPopover: true,
 };
 
-type SettingsTabId = 'provider' | 'translation' | 'popover' | 'advanced';
+type SettingsTabId =
+	| 'provider'
+	| 'dictionary'
+	| 'translation'
+	| 'popover'
+	| 'advanced';
 
 const SETTINGS_TABS: Array<{
 	id: SettingsTabId;
 	labelKey:
 		| 'settingsTabProvider'
+		| 'settingsTabDictionary'
 		| 'settingsTabTranslation'
 		| 'settingsTabPopover'
 		| 'settingsTabAdvanced';
 }> = [
 	{ id: 'provider', labelKey: 'settingsTabProvider' },
+	{ id: 'dictionary', labelKey: 'settingsTabDictionary' },
 	{ id: 'translation', labelKey: 'settingsTabTranslation' },
 	{ id: 'popover', labelKey: 'settingsTabPopover' },
 	{ id: 'advanced', labelKey: 'settingsTabAdvanced' },
@@ -94,6 +120,18 @@ const TRANSLATION_PROVIDERS: Array<{
 	{ id: 'deepl', labelKey: 'settingsProviderDeepL' },
 	{ id: 'baidu', labelKey: 'settingsProviderBaidu' },
 	{ id: 'youdao', labelKey: 'settingsProviderYoudao' },
+];
+
+const DICTIONARY_PROVIDERS: Array<{
+	id: DictionaryProviderId;
+	labelKey:
+		| 'settingsDictionaryProviderYoudao'
+		| 'settingsDictionaryProviderBing'
+		| 'settingsDictionaryProviderCambridge';
+}> = [
+	{ id: 'youdao', labelKey: 'settingsDictionaryProviderYoudao' },
+	{ id: 'bing', labelKey: 'settingsDictionaryProviderBing' },
+	{ id: 'cambridge', labelKey: 'settingsDictionaryProviderCambridge' },
 ];
 
 export class SelectionTranslatorSettingTab extends PluginSettingTab {
@@ -145,6 +183,9 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 		switch (this.activeTab) {
 			case 'provider':
 				this.renderProviderSettings(panelEl);
+				return;
+			case 'dictionary':
+				this.renderDictionarySettings(panelEl);
 				return;
 			case 'translation':
 				this.renderTranslationSettings(panelEl);
@@ -201,6 +242,24 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 		}
 
 		this.renderTestProviderSetting(containerEl);
+	}
+
+	private renderDictionarySettings(containerEl: HTMLElement) {
+		new Setting(containerEl)
+			.setName(t('settingsDictionaryProviderName'))
+			.setDesc(t('settingsDictionaryProviderDesc'))
+			.addDropdown((dropdown) => {
+				for (const provider of DICTIONARY_PROVIDERS) {
+					dropdown.addOption(provider.id, t(provider.labelKey));
+				}
+				dropdown
+					.setValue(this.plugin.settings.dictionaryProvider)
+					.onChange(async (value) => {
+						this.plugin.settings.dictionaryProvider =
+							value as DictionaryProviderId;
+						await this.plugin.saveSettings();
+					});
+			});
 	}
 
 	private renderOpenAIProviderSettings(containerEl: HTMLElement) {

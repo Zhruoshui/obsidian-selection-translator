@@ -3,6 +3,7 @@ import { t } from '../i18n';
 import {
 	DEFAULT_SETTINGS,
 	type SelectionTranslatorSettings,
+	type DictionaryProviderId,
 } from '../settings';
 import {
 	getProviderLanguageCode,
@@ -30,7 +31,7 @@ export class TranslationService {
 		options: TranslationRequestOptions = {},
 	) {
 		if (isDictionaryLookupText(text)) {
-			return translateWithDictionary(text);
+			return translateWithDictionary(text, settings.dictionaryProvider);
 		}
 
 		return this.translateWithProvider(
@@ -311,23 +312,73 @@ async function translateWithYoudao(
 	return translatedText.trim();
 }
 
-async function translateWithDictionary(text: string): Promise<TranslationResult> {
+async function translateWithDictionary(
+	text: string,
+	provider: DictionaryProviderId,
+): Promise<TranslationResult> {
 	const word = normalizeDictionaryWord(text);
+	switch (provider) {
+		case 'youdao':
+			return translateWithYoudaoDictionary(word);
+		case 'bing':
+			return translateWithBingDictionary(word);
+		case 'cambridge':
+			return translateWithCambridgeDictionary(word);
+	}
+}
+
+async function translateWithYoudaoDictionary(
+	word: string,
+): Promise<TranslationResult> {
+	const response = await requestDictionaryHtml(
+		`https://m.youdao.com/dict?le=eng&q=${encodeURIComponent(word)}`,
+	);
+	const result = parseYoudaoDictionaryHtml(response.text);
+	ensureDictionaryResult(result);
+	return result;
+}
+
+async function translateWithBingDictionary(
+	word: string,
+): Promise<TranslationResult> {
+	const response = await requestDictionaryHtml(
+		`https://cn.bing.com/dict/search?q=${encodeURIComponent(word)}`,
+	);
+	const result = parseBingDictionaryHtml(response.text);
+	ensureDictionaryResult(result);
+	return result;
+}
+
+async function translateWithCambridgeDictionary(
+	word: string,
+): Promise<TranslationResult> {
+	const response = await requestDictionaryHtml(
+		`https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${encodeURIComponent(word)}`,
+	);
+	const result = parseCambridgeDictionaryHtml(response.text);
+	ensureDictionaryResult(result);
+	return result;
+}
+
+async function requestDictionaryHtml(url: string) {
 	const response = await requestUrl({
-		url: `https://dict.cn/${encodeURIComponent(word)}`,
+		url,
 		method: 'GET',
 		headers: {
 			Accept: 'text/html',
+			'User-Agent':
+				'Mozilla/5.0 (compatible; Obsidian Selection Translator)',
 		},
 		throw: false,
 	});
 	ensureSuccessfulResponse(response.status, undefined, response.text);
+	return response;
+}
 
-	const result = parseDictCnDictionaryHtml(response.text);
+function ensureDictionaryResult(result: TranslationResult) {
 	if (!result.text.trim()) {
 		throw new Error(t('dictionaryNoResult'));
 	}
-	return result;
 }
 
 function isDictionaryLookupText(text: string) {
@@ -477,59 +528,225 @@ function getDictionaryLookupWord(text: string) {
 	return word;
 }
 
-function parseDictCnDictionaryHtml(html: string): TranslationResult {
-	const document = new DOMParser().parseFromString(html, 'text/html');
-	for (const element of Array.from(document.querySelectorAll('script, style'))) {
-		element.remove();
-	}
-
-	const audio = getDictCnPronunciationAudio(document);
-	const definitionLines = getDictCnDefinitionLines(document);
+function parseYoudaoDictionaryHtml(html: string): TranslationResult {
+	const document = parseDictionaryDocument(html);
+	const audio = getYoudaoPronunciationAudio(document);
 	const lines = [
 		...formatPronunciationAudioLines(audio),
-		...definitionLines,
+		...getFirstNonEmptyLineGroup(
+			document,
+			[
+				'.trans-container li',
+				'.word-exp',
+				'.basic .word-exp',
+				'.wordbook-js .trans',
+				'.trans',
+			],
+			12,
+		),
 	];
 
 	return {
-		text: lines.join('\n').trim(),
+		text: uniqueLines(lines).join('\n').trim(),
 		audio,
 	};
 }
 
-function getDictCnPronunciationAudio(document: Document) {
+function parseBingDictionaryHtml(html: string): TranslationResult {
+	const document = parseDictionaryDocument(html);
+	const audio = getBingPronunciationAudio(document);
+	const lines = [
+		...formatPronunciationAudioLines(audio),
+		...getFirstNonEmptyLineGroup(
+			document,
+			[
+				'.qdef .hd_area',
+				'.qdef ul li',
+				'.qdef .def',
+				'.hd_if',
+				'.hd_area',
+			],
+			12,
+		),
+	];
+
+	return {
+		text: uniqueLines(lines).join('\n').trim(),
+		audio,
+	};
+}
+
+function parseCambridgeDictionaryHtml(html: string): TranslationResult {
+	const document = parseDictionaryDocument(html);
+	const audio = getCambridgePronunciationAudio(document);
+	const lines = [
+		...formatPronunciationAudioLines(audio),
+		...getFirstNonEmptyLineGroup(
+			document,
+			[
+				'.def-block',
+				'.pr.entry-body__el',
+				'.sense-body',
+				'.entry-body',
+			],
+			16,
+		),
+	];
+
+	return {
+		text: uniqueLines(lines).join('\n').trim(),
+		audio,
+	};
+}
+
+function parseDictionaryDocument(html: string) {
+	const document = new DOMParser().parseFromString(html, 'text/html');
+	for (const element of Array.from(document.querySelectorAll('script, style'))) {
+		element.remove();
+	}
+	return document;
+}
+
+function getYoudaoPronunciationAudio(document: Document) {
+	return getPronunciationAudioFromElements(
+		document,
+		[
+			'a[data-rel]',
+			'a[ref]',
+			'a[href*="voice"]',
+			'a[href*="audio"]',
+			'.phonetic a',
+		],
+		(element, index) => {
+			const url =
+				element.getAttribute('data-rel') ??
+				element.getAttribute('ref') ??
+				element.getAttribute('href') ??
+				'';
+			return createPronunciationAudioFromElement(
+				element,
+				url,
+				getYoudaoAudioAccent(element, index),
+				'https://dict.youdao.com',
+			);
+		},
+	);
+}
+
+function getBingPronunciationAudio(document: Document) {
+	return getPronunciationAudioFromElements(
+		document,
+		['.hd_area a[onclick*="playSound"]', 'a[onclick*="playSound"]'],
+		(element, index) => {
+			const onclick = element.getAttribute('onclick') ?? '';
+			return createPronunciationAudioFromElement(
+				element,
+				matchQuotedUrl(onclick),
+				getBingAudioAccent(element, index),
+				'https://cn.bing.com',
+			);
+		},
+	);
+}
+
+function getCambridgePronunciationAudio(document: Document) {
+	return getPronunciationAudioFromElements(
+		document,
+		['source[type="audio/mpeg"][src]', 'source[src]'],
+		(element, index) => {
+			const sourceUrl = element.getAttribute('src') ?? '';
+			const parentText = getNormalizedText(element.closest('.pos-header, .dpron-i'));
+			return createPronunciationAudioFromElement(
+				element,
+				sourceUrl,
+				getCambridgeAudioAccent(parentText, sourceUrl, index),
+				'https://dictionary.cambridge.org',
+			);
+		},
+	);
+}
+
+function getPronunciationAudioFromElements(
+	document: Document,
+	selectors: string[],
+	createAudio: (
+		element: HTMLElement,
+		index: number,
+	) => PronunciationAudio | undefined,
+) {
 	const audio: PronunciationAudio[] = [];
 	const seenUrls = new Set<string>();
-	const spans = Array.from(
-		document.querySelectorAll<HTMLSpanElement>('div.phonetic > span'),
+	const elements = selectors.flatMap((selector) =>
+		Array.from(document.querySelectorAll<HTMLElement>(selector)),
 	);
 
-	for (const [spanIndex, span] of spans.entries()) {
-		const spanText = getDictCnPhoneticText(span);
-		const phonetic = matchBracketedPhonetic(spanText);
-		const buttons = Array.from(span.querySelectorAll<HTMLElement>('i[naudio]'));
-		for (const button of buttons) {
-			const audioPath = button.getAttribute('naudio')?.trim();
-			if (!audioPath) {
-				continue;
-			}
-
-			const url = getDictCnAudioUrl(audioPath);
-			if (seenUrls.has(url)) {
-				continue;
-			}
-			seenUrls.add(url);
-
-			const accent = getDictCnAudioAccent(spanText, button.title, spanIndex);
-			audio.push({
-				accent,
-				label: getPronunciationAccentLabel(accent, button.title),
-				phonetic,
-				url,
-			});
+	for (const [index, element] of elements.entries()) {
+		const item = createAudio(element, index);
+		if (!item || !item.url || seenUrls.has(item.url)) {
+			continue;
 		}
+		seenUrls.add(item.url);
+		audio.push(item);
 	}
 
 	return audio;
+}
+
+function createPronunciationAudioFromElement(
+	element: Element,
+	url: string,
+	accent: PronunciationAudio['accent'],
+	baseUrl: string,
+) {
+	const normalizedUrl = getAbsoluteDictionaryUrl(url, baseUrl);
+	if (!normalizedUrl) {
+		return undefined;
+	}
+
+	return {
+		accent,
+		label: getPronunciationAccentLabel(accent, element.getAttribute('title') ?? ''),
+		phonetic: getNearbyPhonetic(element),
+		url: normalizedUrl,
+	};
+}
+
+function getFirstNonEmptyLineGroup(
+	document: Document,
+	selectors: string[],
+	limit: number,
+) {
+	for (const selector of selectors) {
+		const lines = Array.from(document.querySelectorAll(selector))
+			.map((element) => getNormalizedText(element))
+			.flatMap(splitDictionaryLines)
+			.filter((line) => line.length > 0)
+			.slice(0, limit);
+		if (lines.length > 0) {
+			return uniqueLines(lines);
+		}
+	}
+	return [];
+}
+
+function splitDictionaryLines(text: string) {
+	return text
+		.split(/(?=(?:n|v|vi|vt|adj|adv|prep|conj|pron|abbr)\.\s)/i)
+		.map((line) => line.trim())
+		.filter((line) => line.length > 0);
+}
+
+function uniqueLines(lines: string[]) {
+	const seen = new Set<string>();
+	const unique: string[] = [];
+	for (const line of lines) {
+		if (seen.has(line)) {
+			continue;
+		}
+		seen.add(line);
+		unique.push(line);
+	}
+	return unique;
 }
 
 function formatPronunciationAudioLines(audio: PronunciationAudio[]) {
@@ -549,50 +766,8 @@ function formatPronunciationAudioLines(audio: PronunciationAudio[]) {
 	return lines;
 }
 
-function getDictCnDefinitionLines(document: Document) {
-	return Array.from(
-		document.querySelectorAll<HTMLLIElement>('ul.dict-basic-ul > li'),
-	)
-		.filter((element) => !element.querySelector('script'))
-		.map((element) => getNormalizedText(element))
-		.filter((line) => line.length > 0);
-}
-
-function getDictCnPhoneticText(span: HTMLSpanElement) {
-	const clone = span.cloneNode(true);
-	if (!clone.instanceOf(HTMLSpanElement)) {
-		return getNormalizedText(span);
-	}
-	for (const audioButton of Array.from(clone.querySelectorAll('i'))) {
-		audioButton.remove();
-	}
-	return getNormalizedText(clone);
-}
-
 function matchBracketedPhonetic(text: string) {
 	return /\[([^\]]+)\]/.exec(text)?.[1]?.trim() ?? '';
-}
-
-function getDictCnAudioUrl(audioPath: string) {
-	if (/^https?:\/\//i.test(audioPath)) {
-		return audioPath;
-	}
-	return `https://audio.dict.cn/${audioPath.replace(/^\/+/, '')}`;
-}
-
-function getDictCnAudioAccent(
-	spanText: string,
-	title: string,
-	spanIndex: number,
-): PronunciationAudio['accent'] {
-	const text = `${spanText} ${title}`.toLowerCase();
-	if (text.includes('美') || text.includes('us') || text.includes('american')) {
-		return 'us';
-	}
-	if (text.includes('英') || text.includes('uk') || text.includes('british')) {
-		return 'uk';
-	}
-	return spanIndex === 1 ? 'us' : 'uk';
 }
 
 function getPronunciationAccentLabel(
@@ -606,6 +781,92 @@ function getPronunciationAccentLabel(
 			return t('popoverPronunciationUs');
 		case 'other':
 			return fallback.trim() || t('popoverPronunciationUk');
+	}
+}
+
+function getYoudaoAudioAccent(
+	element: Element,
+	index: number,
+): PronunciationAudio['accent'] {
+	const text = getAudioContextText(element);
+	if (text.includes('美') || text.includes('us') || text.includes('american')) {
+		return 'us';
+	}
+	if (text.includes('英') || text.includes('uk') || text.includes('british')) {
+		return 'uk';
+	}
+	return index === 1 ? 'us' : 'uk';
+}
+
+function getBingAudioAccent(
+	element: Element,
+	index: number,
+): PronunciationAudio['accent'] {
+	const text = getAudioContextText(element);
+	if (text.includes('美') || text.includes('us') || text.includes('american')) {
+		return 'us';
+	}
+	if (text.includes('英') || text.includes('uk') || text.includes('british')) {
+		return 'uk';
+	}
+	return index === 1 ? 'us' : 'uk';
+}
+
+function getCambridgeAudioAccent(
+	parentText: string,
+	url: string,
+	index: number,
+): PronunciationAudio['accent'] {
+	const text = `${parentText} ${url}`.toLowerCase();
+	if (text.includes('us') || text.includes('american')) {
+		return 'us';
+	}
+	if (text.includes('uk') || text.includes('british')) {
+		return 'uk';
+	}
+	return index === 1 ? 'us' : 'uk';
+}
+
+function getAudioContextText(element: Element) {
+	return [
+		element.getAttribute('title') ?? '',
+		element.getAttribute('aria-label') ?? '',
+		getNormalizedText(element),
+		getNormalizedText(element.parentElement),
+	]
+		.join(' ')
+		.toLowerCase();
+}
+
+function getNearbyPhonetic(element: Element) {
+	const candidates = [
+		getNormalizedText(element.closest('.phonetic, .hd_area, .pos-header')),
+		getNormalizedText(element.parentElement),
+		getNormalizedText(element.previousElementSibling),
+		getNormalizedText(element.nextElementSibling),
+	];
+	for (const candidate of candidates) {
+		const phonetic = matchBracketedPhonetic(candidate);
+		if (phonetic) {
+			return phonetic;
+		}
+	}
+	return '';
+}
+
+function matchQuotedUrl(text: string) {
+	return /['"]([^'"]+\.(?:mp3|wav)(?:\?[^'"]*)?)['"]/i.exec(text)?.[1] ?? '';
+}
+
+function getAbsoluteDictionaryUrl(url: string, baseUrl: string) {
+	const trimmed = url.trim();
+	if (!trimmed || trimmed.startsWith('javascript:')) {
+		return '';
+	}
+	try {
+		return new URL(trimmed, baseUrl).toString();
+	} catch {
+		return '';
 	}
 }
 

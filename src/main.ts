@@ -12,6 +12,7 @@ import {
 	LEGACY_DEFAULT_PROMPT,
 	SelectionTranslatorSettingTab,
 	SelectionTranslatorSettings,
+	resolveDictionaryProvider,
 } from './settings';
 import {
 	appendTaskResult,
@@ -78,6 +79,14 @@ export default class SelectionTranslatorPlugin extends Plugin {
 		);
 		if (textTranslationProvider !== this.settings.provider) {
 			this.settings.provider = textTranslationProvider;
+			shouldSaveSettings = true;
+		}
+
+		const dictionaryProvider = resolveDictionaryProvider(
+			this.settings.dictionaryProvider,
+		);
+		if (dictionaryProvider !== this.settings.dictionaryProvider) {
+			this.settings.dictionaryProvider = dictionaryProvider;
 			shouldSaveSettings = true;
 		}
 
