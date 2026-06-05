@@ -1,11 +1,23 @@
 import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
 import { t } from './i18n';
 import type SelectionTranslatorPlugin from './main';
+import type { TranslationProviderId } from './services/languageCodes';
 
 export interface SelectionTranslatorSettings {
+	provider: TranslationProviderId;
 	apiBaseUrl: string;
 	apiKey: string;
 	model: string;
+	microsoftTranslatorKey: string;
+	microsoftTranslatorRegion: string;
+	microsoftTranslatorEndpoint: string;
+	googleTranslateApiKey: string;
+	deeplApiKey: string;
+	deeplApiBaseUrl: string;
+	baiduTranslateAppId: string;
+	baiduTranslateSecretKey: string;
+	youdaoTranslateAppKey: string;
+	youdaoTranslateAppSecret: string;
 	sourceLanguage: string;
 	targetLanguage: string;
 	prompt: string;
@@ -22,9 +34,20 @@ export const DEFAULT_PROMPT =
 	'Translate the user text from {sourceLanguage} into {targetLanguage}. Output only the translated text. Preserve Markdown formatting, code blocks, URLs, proper nouns, terminology, line breaks, and punctuation. Do not explain, summarize, or add commentary.';
 
 export const DEFAULT_SETTINGS: SelectionTranslatorSettings = {
+	provider: 'openai',
 	apiBaseUrl: 'https://api.openai.com/v1',
 	apiKey: '',
 	model: '',
+	microsoftTranslatorKey: '',
+	microsoftTranslatorRegion: '',
+	microsoftTranslatorEndpoint: 'https://api.cognitive.microsofttranslator.com',
+	googleTranslateApiKey: '',
+	deeplApiKey: '',
+	deeplApiBaseUrl: 'https://api-free.deepl.com',
+	baiduTranslateAppId: '',
+	baiduTranslateSecretKey: '',
+	youdaoTranslateAppKey: '',
+	youdaoTranslateAppSecret: '',
 	sourceLanguage: 'Auto',
 	targetLanguage: 'Chinese (Simplified)',
 	prompt: DEFAULT_PROMPT,
@@ -48,6 +71,24 @@ const SETTINGS_TABS: Array<{
 	{ id: 'translation', labelKey: 'settingsTabTranslation' },
 	{ id: 'popover', labelKey: 'settingsTabPopover' },
 	{ id: 'advanced', labelKey: 'settingsTabAdvanced' },
+];
+
+const TRANSLATION_PROVIDERS: Array<{
+	id: TranslationProviderId;
+	labelKey:
+		| 'settingsProviderOpenAI'
+		| 'settingsProviderMicrosoft'
+		| 'settingsProviderGoogle'
+		| 'settingsProviderDeepL'
+		| 'settingsProviderBaidu'
+		| 'settingsProviderYoudao';
+}> = [
+	{ id: 'openai', labelKey: 'settingsProviderOpenAI' },
+	{ id: 'microsoft', labelKey: 'settingsProviderMicrosoft' },
+	{ id: 'google', labelKey: 'settingsProviderGoogle' },
+	{ id: 'deepl', labelKey: 'settingsProviderDeepL' },
+	{ id: 'baidu', labelKey: 'settingsProviderBaidu' },
+	{ id: 'youdao', labelKey: 'settingsProviderYoudao' },
 ];
 
 export class SelectionTranslatorSettingTab extends PluginSettingTab {
@@ -114,6 +155,47 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 
 	private renderProviderSettings(containerEl: HTMLElement) {
 		new Setting(containerEl)
+			.setName(t('settingsTranslationProviderName'))
+			.setDesc(t('settingsTranslationProviderDesc'))
+			.addDropdown((dropdown) => {
+				for (const provider of TRANSLATION_PROVIDERS) {
+					dropdown.addOption(provider.id, t(provider.labelKey));
+				}
+				dropdown
+					.setValue(this.plugin.settings.provider)
+					.onChange(async (value) => {
+						this.plugin.settings.provider = value as TranslationProviderId;
+						await this.plugin.saveSettings();
+						this.display();
+					});
+			});
+
+		switch (this.plugin.settings.provider) {
+			case 'openai':
+				this.renderOpenAIProviderSettings(containerEl);
+				break;
+			case 'microsoft':
+				this.renderMicrosoftProviderSettings(containerEl);
+				break;
+			case 'google':
+				this.renderGoogleProviderSettings(containerEl);
+				break;
+			case 'deepl':
+				this.renderDeepLProviderSettings(containerEl);
+				break;
+			case 'baidu':
+				this.renderBaiduProviderSettings(containerEl);
+				break;
+			case 'youdao':
+				this.renderYoudaoProviderSettings(containerEl);
+				break;
+		}
+
+		this.renderTestProviderSetting(containerEl);
+	}
+
+	private renderOpenAIProviderSettings(containerEl: HTMLElement) {
+		new Setting(containerEl)
 			.setName(t('settingsProviderHeading'))
 			.setDesc(t('settingsProviderDesc'));
 
@@ -156,7 +238,9 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
+	}
 
+	private renderTestProviderSetting(containerEl: HTMLElement) {
 		new Setting(containerEl)
 			.setName(t('settingsTestName'))
 			.setDesc(t('settingsTestDesc'))
@@ -179,6 +263,153 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 							button.setButtonText(t('settingsTestButton'));
 							button.buttonEl.disabled = false;
 						}
+					});
+			});
+	}
+
+	private renderMicrosoftProviderSettings(containerEl: HTMLElement) {
+		new Setting(containerEl)
+			.setName(t('settingsMicrosoftTranslatorKeyName'))
+			.setDesc(t('settingsMicrosoftTranslatorKeyDesc'))
+			.addText((text) => {
+				text.inputEl.type = 'password';
+				text
+					.setPlaceholder(t('settingsApiKeyPlaceholder'))
+					.setValue(this.plugin.settings.microsoftTranslatorKey)
+					.onChange(async (value) => {
+						this.plugin.settings.microsoftTranslatorKey = value.trim();
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName(t('settingsMicrosoftTranslatorRegionName'))
+			.setDesc(t('settingsMicrosoftTranslatorRegionDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(t('settingsMicrosoftTranslatorRegionPlaceholder'))
+					.setValue(this.plugin.settings.microsoftTranslatorRegion)
+					.onChange(async (value) => {
+						this.plugin.settings.microsoftTranslatorRegion = value.trim();
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsMicrosoftTranslatorEndpointName'))
+			.setDesc(t('settingsMicrosoftTranslatorEndpointDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(DEFAULT_SETTINGS.microsoftTranslatorEndpoint)
+					.setValue(this.plugin.settings.microsoftTranslatorEndpoint)
+					.onChange(async (value) => {
+						this.plugin.settings.microsoftTranslatorEndpoint =
+							value.trim() || DEFAULT_SETTINGS.microsoftTranslatorEndpoint;
+						await this.plugin.saveSettings();
+					}),
+			);
+	}
+
+	private renderGoogleProviderSettings(containerEl: HTMLElement) {
+		new Setting(containerEl)
+			.setName(t('settingsGoogleTranslateApiKeyName'))
+			.setDesc(t('settingsGoogleTranslateApiKeyDesc'))
+			.addText((text) => {
+				text.inputEl.type = 'password';
+				text
+					.setPlaceholder(t('settingsApiKeyPlaceholder'))
+					.setValue(this.plugin.settings.googleTranslateApiKey)
+					.onChange(async (value) => {
+						this.plugin.settings.googleTranslateApiKey = value.trim();
+						await this.plugin.saveSettings();
+					});
+			});
+	}
+
+	private renderDeepLProviderSettings(containerEl: HTMLElement) {
+		new Setting(containerEl)
+			.setName(t('settingsDeepLApiKeyName'))
+			.setDesc(t('settingsDeepLApiKeyDesc'))
+			.addText((text) => {
+				text.inputEl.type = 'password';
+				text
+					.setPlaceholder(t('settingsApiKeyPlaceholder'))
+					.setValue(this.plugin.settings.deeplApiKey)
+					.onChange(async (value) => {
+						this.plugin.settings.deeplApiKey = value.trim();
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName(t('settingsDeepLApiBaseUrlName'))
+			.setDesc(t('settingsDeepLApiBaseUrlDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(DEFAULT_SETTINGS.deeplApiBaseUrl)
+					.setValue(this.plugin.settings.deeplApiBaseUrl)
+					.onChange(async (value) => {
+						this.plugin.settings.deeplApiBaseUrl =
+							value.trim() || DEFAULT_SETTINGS.deeplApiBaseUrl;
+						await this.plugin.saveSettings();
+					}),
+			);
+	}
+
+	private renderBaiduProviderSettings(containerEl: HTMLElement) {
+		new Setting(containerEl)
+			.setName(t('settingsBaiduTranslateAppIdName'))
+			.setDesc(t('settingsBaiduTranslateAppIdDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(t('settingsBaiduTranslateAppIdPlaceholder'))
+					.setValue(this.plugin.settings.baiduTranslateAppId)
+					.onChange(async (value) => {
+						this.plugin.settings.baiduTranslateAppId = value.trim();
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsBaiduTranslateSecretKeyName'))
+			.setDesc(t('settingsBaiduTranslateSecretKeyDesc'))
+			.addText((text) => {
+				text.inputEl.type = 'password';
+				text
+					.setPlaceholder(t('settingsBaiduTranslateSecretKeyPlaceholder'))
+					.setValue(this.plugin.settings.baiduTranslateSecretKey)
+					.onChange(async (value) => {
+						this.plugin.settings.baiduTranslateSecretKey = value.trim();
+						await this.plugin.saveSettings();
+					});
+			});
+	}
+
+	private renderYoudaoProviderSettings(containerEl: HTMLElement) {
+		new Setting(containerEl)
+			.setName(t('settingsYoudaoTranslateAppKeyName'))
+			.setDesc(t('settingsYoudaoTranslateAppKeyDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(t('settingsYoudaoTranslateAppKeyPlaceholder'))
+					.setValue(this.plugin.settings.youdaoTranslateAppKey)
+					.onChange(async (value) => {
+						this.plugin.settings.youdaoTranslateAppKey = value.trim();
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsYoudaoTranslateAppSecretName'))
+			.setDesc(t('settingsYoudaoTranslateAppSecretDesc'))
+			.addText((text) => {
+				text.inputEl.type = 'password';
+				text
+					.setPlaceholder(t('settingsYoudaoTranslateAppSecretPlaceholder'))
+					.setValue(this.plugin.settings.youdaoTranslateAppSecret)
+					.onChange(async (value) => {
+						this.plugin.settings.youdaoTranslateAppSecret = value.trim();
+						await this.plugin.saveSettings();
 					});
 			});
 	}

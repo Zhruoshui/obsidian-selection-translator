@@ -1,7 +1,7 @@
 {
 	"name": "obsidian-selection-translator",
 	"version": "1.0.0",
-	"description": "Translate selected Obsidian editor text with an OpenAI-compatible Chat API provider.",
+	"description": "Translate selected Obsidian editor text with selectable translation providers.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
@@ -13,7 +13,12 @@
 	"keywords": [
 		"obsidian",
 		"translation",
-		"openai-compatible"
+		"openai-compatible",
+		"bing-translate",
+		"deepl",
+		"google-translate",
+		"baidu-translate",
+		"youdao-translate"
 	],
 	"license": "0-BSD",
 	"devDependencies": {

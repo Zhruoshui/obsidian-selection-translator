@@ -5,7 +5,7 @@ import {
 	getEditorSelection,
 } from './selection/currentSelection';
 import { t } from './i18n';
-import { OpenAICompatibleChatService } from './services/openAICompatibleChat';
+import { TranslationService } from './services/translationService';
 import {
 	DEFAULT_SETTINGS,
 	LEGACY_DEFAULT_PROMPT,
@@ -24,7 +24,7 @@ import { TranslationPopover } from './ui/translationPopover';
 
 export default class SelectionTranslatorPlugin extends Plugin {
 	settings!: SelectionTranslatorSettings;
-	private translator!: OpenAICompatibleChatService;
+	private translator!: TranslationService;
 	private popover!: TranslationPopover;
 	private currentAbortController: AbortController | null = null;
 	private lastTranslatedSelection = '';
@@ -33,7 +33,7 @@ export default class SelectionTranslatorPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		this.translator = new OpenAICompatibleChatService();
+		this.translator = new TranslationService();
 		this.popover = new TranslationPopover(
 			(sourceText) => {
 				void this.translateText(sourceText, true);

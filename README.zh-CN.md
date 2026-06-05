@@ -11,7 +11,7 @@
 [常见问题](#常见问题) |
 [开发](#开发)
 
-Selection Translator 是一个 Obsidian 插件，可以使用 OpenAI 兼容的 Chat API 服务商翻译 Markdown 编辑器或 PDF 中选中的文本。
+Selection Translator 是一个 Obsidian 插件，可以使用可自行选择的 AI 或传统翻译服务商翻译 Markdown 编辑器或 PDF 中选中的文本。
 
 ---
 
@@ -28,7 +28,7 @@ Selection Translator 是一个 Obsidian 插件，可以使用 OpenAI 兼容的 C
 - 在插件设置中配置默认源语言和目标语言。
 - 也可以直接在翻译悬浮窗中调整源语言和目标语言。
 - 如果希望悬浮窗更紧凑，可以隐藏顶部语言设置。
-- 源语言使用 `Auto` 时，由模型自动识别输入语言。
+- 源语言使用 `Auto` 时，由支持的服务商自动识别输入语言。
 
 ### 悬浮窗工作流
 
@@ -39,8 +39,9 @@ Selection Translator 是一个 Obsidian 插件，可以使用 OpenAI 兼容的 C
 
 ### 服务商支持
 
-- 支持 OpenAI 兼容的 Chat Completions 服务商。
-- 可配置 API 基础 URL、API 密钥、模型、提示词、温度和最大选中文本长度。
+- 用户自行选择翻译服务商。OpenAI 兼容服务商、Bing 翻译（Microsoft Translator）、Google 翻译、DeepL、百度翻译和有道翻译都是同级选项。
+- 根据当前选择的服务商配置所需凭据。
+- OpenAI 兼容服务商支持提示词、温度和流式输出。传统翻译 API 会在服务商请求完成后返回译文。
 - 翻译前可以测试服务商配置是否可用。
 - 插件界面跟随 Obsidian 应用语言，目前支持 English 和简体中文。
 
@@ -50,11 +51,12 @@ Selection Translator 是一个 Obsidian 插件，可以使用 OpenAI 兼容的 C
 
 1. 通过 BRAT 或手动安装插件。
 2. 打开 **Settings -> Community plugins -> Selection Translator**。
-3. 配置 **API 基础 URL**、**API 密钥** 和 **模型**。
-4. 设置默认 **源语言** 和 **目标语言**。
-5. 选择 **测试** 验证服务商配置。
-6. 在 Markdown 编辑器或 Obsidian PDF 视图中选择可选中的 PDF 文本。
-7. 从命令面板、快捷键、左侧功能区按钮或编辑器右键菜单运行 **Translate selection**。
+3. 选择 **翻译服务商**。
+4. 配置该服务商需要的凭据。
+5. 设置默认 **源语言** 和 **目标语言**。
+6. 选择 **测试** 验证服务商配置。
+7. 在 Markdown 编辑器或 Obsidian PDF 视图中选择可选中的 PDF 文本。
+8. 从命令面板、快捷键、左侧功能区按钮或编辑器右键菜单运行 **Translate selection**。
 
 默认提示词会从 `Auto` 翻译到 `Chinese (Simplified)`，并且只返回译文。
 
@@ -68,18 +70,39 @@ Selection Translator 是一个 Obsidian 插件，可以使用 OpenAI 兼容的 C
 
 | 设置 | 默认值 | 说明 |
 | --- | --- | --- |
-| API 基础 URL | `https://api.openai.com/v1` | 服务商基础 URL。必要时插件会追加 `/chat/completions`。 |
-| API 密钥 | 空 | 用于配置服务商的 Bearer token。 |
-| 模型 | 空 | 服务商支持的模型名称。 |
-| 测试 API 配置 | - | 发送一个简短请求验证基础 URL、API 密钥和模型。 |
+| 翻译服务商 | `OpenAI 兼容` | 选择由哪个服务商处理翻译请求。 |
+| OpenAI 兼容 API 基础 URL | `https://api.openai.com/v1` | 服务商基础 URL。必要时插件会追加 `/chat/completions`。 |
+| OpenAI 兼容 API 密钥 | 空 | 当前 OpenAI 兼容服务商的 Bearer token。 |
+| OpenAI 兼容模型 | 空 | 服务商支持的模型名称。 |
+| Bing/Microsoft Translator 密钥 | 空 | Bing 翻译使用的 Microsoft Translator 资源订阅密钥。 |
+| Bing/Microsoft Translator 区域 | 空 | 资源区域，例如 `eastasia` 或 `global`。 |
+| Bing/Microsoft Translator 端点 | `https://api.cognitive.microsofttranslator.com` | Translator 端点。 |
+| Google 翻译 API 密钥 | 空 | Google Cloud Translation Basic v2 的 API 密钥。 |
+| DeepL Auth Key | 空 | DeepL 账号中的认证密钥。 |
+| DeepL API 基础 URL | `https://api-free.deepl.com` | DeepL Pro 可使用 `https://api.deepl.com`。 |
+| 百度翻译 App ID | 空 | 百度翻译开放平台中的 App ID。 |
+| 百度翻译密钥 | 空 | 百度翻译开放平台中的密钥。 |
+| 有道翻译 App Key | 空 | 有道智云翻译服务中的 App Key。 |
+| 有道翻译 App Secret | 空 | 有道智云翻译服务中的 App Secret。 |
+| 测试 API 配置 | - | 发送一个简短翻译请求，验证当前选择的服务商配置。 |
+
+Google 翻译和 Bing 翻译的网页端可以免费手动使用，但本插件调用的是官方 API。即使服务商提供免费额度或免费层，API 调用也仍然需要配置对应的凭据。
+
+| 服务商 | API 使用说明 | Key 获取入口 | 价格说明 |
+| --- | --- | --- | --- |
+| Bing 翻译（Microsoft Translator） | Azure Translator API 有 F0 免费层，但仍需要创建 Azure Translator 资源，并配置 key、endpoint，部分资源还需要 region。 | [创建 Translator 资源](https://learn.microsoft.com/en-us/azure/ai-services/translator/create-translator-resource) | [Azure Translator 价格](https://azure.microsoft.com/pricing/details/cognitive-services/translator/) |
+| Google 翻译 | Cloud Translation 有每月免费用量抵扣，但 API 调用需要 Google Cloud 项目、结算账号、启用 API 和凭据。 | [Cloud Translation 设置](https://cloud.google.com/translate/docs/setup)、[创建 API Key](https://cloud.google.com/docs/authentication/api-keys#create) | [Cloud Translation 价格](https://cloud.google.com/translate/pricing) |
+| DeepL | 需要 DeepL API 账号和 Auth Key。API Free 使用 `https://api-free.deepl.com`，API Pro 使用 `https://api.deepl.com`。 | [DeepL API 鉴权](https://developers.deepl.com/docs/getting-started/auth) | [DeepL API 套餐](https://www.deepl.com/pro-api) |
+| 百度翻译 | 需要百度翻译开放平台的 App ID 和密钥。 | [百度翻译 API 文档](https://fanyi-api.baidu.com/doc/21)、[开放平台官网](https://fanyi-api.baidu.com/) | [百度翻译产品](https://fanyi-api.baidu.com/product/11) |
+| 有道翻译 | 需要有道智云的 App Key 和 App Secret。 | [新手指南](https://ai.youdao.com/doc.s#guide)、[应用管理](https://ai.youdao.com/appmgr.s)、[文本翻译 API 文档](https://ai.youdao.com/DOCSIRMA/html/trans/api/wbfy/index.html) | [有道文本翻译价格](https://ai.youdao.com/DOCSIRMA/html/trans/price/wbfy/index.html) |
 
 ### 翻译
 
 | 设置 | 默认值 | 说明 |
 | --- | --- | --- |
-| 源语言 | `Auto` | 默认源语言。使用 `Auto` 表示由模型自动识别。 |
+| 源语言 | `Auto` | 默认源语言。使用 `Auto` 表示由支持的服务商自动识别。 |
 | 目标语言 | `Chinese (Simplified)` | 默认目标语言。 |
-| 提示词 | 内置 | 翻译指令。使用 `{sourceLanguage}` 和 `{targetLanguage}` 表示配置的语言。 |
+| 提示词 | 内置 | OpenAI 兼容服务商使用的翻译指令。使用 `{sourceLanguage}` 和 `{targetLanguage}` 表示配置的语言。 |
 
 ### 悬浮窗
 
@@ -92,7 +115,7 @@ Selection Translator 是一个 Obsidian 插件，可以使用 OpenAI 兼容的 C
 
 | 设置 | 默认值 | 说明 |
 | --- | --- | --- |
-| 温度 | `0.2` | 较低的值会让翻译结果更稳定。 |
+| 温度 | `0.2` | 较低的值会让 OpenAI 兼容翻译结果更稳定。 |
 | 最大选中文本长度 | `4000` | 阻止意外发送过长文本。 |
 
 ---
@@ -125,9 +148,9 @@ PDF 支持依赖可选择的 PDF 文本层。没有 OCR 文本的扫描件页面
 
 本插件不收集遥测数据，也不会扫描你的 vault。
 
-翻译 Markdown 或 PDF 选中文本时，只有被选中的文本会发送到插件设置中配置的 OpenAI 兼容服务商。除非你信任该服务商，否则不要翻译敏感内容。
+翻译 Markdown 或 PDF 选中文本时，只有被选中的文本会发送到插件设置中当前选择的翻译服务商。除非你信任该服务商，否则不要翻译敏感内容。
 
-API 密钥通过 Obsidian 插件数据的 `saveData()` 存储在本地。设置页会把它显示为密码输入框，但 Obsidian 插件数据是本地明文存储，不是加密存储。本插件不会记录 API 密钥。
+服务商凭据通过 Obsidian 插件数据的 `saveData()` 存储在本地。密钥字段会显示为密码输入框，但 Obsidian 插件数据是本地明文存储，不是加密存储。本插件不会记录服务商凭据。
 
 ---
 
@@ -167,8 +190,8 @@ BRAT 会从 GitHub release 安装插件文件。每个 release 都需要包含 `
 ### 配置测试失败
 
 - 确认 API 基础 URL 正确并且可以访问。
-- 确认 API 密钥对当前服务商有效。
-- 确认模型名称存在于该服务商。
+- 确认凭据对当前选择的服务商有效。
+- 对于 OpenAI 兼容服务商，确认模型名称存在于该服务商。
 
 ### 翻译悬浮窗没有出现
 

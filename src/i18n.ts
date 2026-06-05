@@ -10,9 +10,18 @@ const en = {
 	settingsTabTranslation: 'Translation',
 	settingsTabPopover: 'Popover',
 	settingsTabAdvanced: 'Advanced',
+	settingsTranslationProviderName: 'Translation provider',
+	settingsTranslationProviderDesc:
+		'Choose the provider used for new translation requests. All providers are selectable peers.',
+	settingsProviderOpenAI: 'OpenAI-compatible',
+	settingsProviderMicrosoft: 'Bing Translate (Microsoft Translator)',
+	settingsProviderGoogle: 'Google Cloud Translation',
+	settingsProviderDeepL: 'DeepL',
+	settingsProviderBaidu: 'Baidu Translate',
+	settingsProviderYoudao: 'Youdao Translate',
 	settingsProviderHeading: 'OpenAI-compatible chat API',
 	settingsProviderDesc:
-		'Selected text is sent to the configured provider when you run translation.',
+		'Selected text is sent to this provider when OpenAI-compatible translation is selected.',
 	settingsApiBaseUrlName: 'API base URL',
 	settingsApiBaseUrlDesc: 'Base URL for the provider.',
 	settingsApiKeyName: 'API key',
@@ -22,23 +31,59 @@ const en = {
 	settingsModelName: 'Model',
 	settingsModelDesc: 'Model name supported by your provider.',
 	settingsModelPlaceholder: 'Model name',
+	settingsMicrosoftTranslatorKeyName: 'Bing/Microsoft Translator key',
+	settingsMicrosoftTranslatorKeyDesc:
+		'Azure Translator resource key. The API has an F0 free tier, but still requires a resource key. Setup: https://learn.microsoft.com/en-us/azure/ai-services/translator/create-translator-resource',
+	settingsMicrosoftTranslatorRegionName: 'Bing/Microsoft Translator region',
+	settingsMicrosoftTranslatorRegionDesc:
+		'Resource region, such as eastasia or global. Leave empty if your endpoint does not require it.',
+	settingsMicrosoftTranslatorRegionPlaceholder: 'global',
+	settingsMicrosoftTranslatorEndpointName: 'Bing/Microsoft Translator endpoint',
+	settingsMicrosoftTranslatorEndpointDesc:
+		'Translator endpoint. Leave the default unless your resource uses another endpoint.',
+	settingsGoogleTranslateApiKeyName: 'Google Cloud Translation API key',
+	settingsGoogleTranslateApiKeyDesc:
+		'API key for Google Cloud Translation Basic v2. Monthly free credits may apply, but API calls still require credentials. Setup: https://cloud.google.com/translate/docs/setup',
+	settingsDeepLApiKeyName: 'DeepL Auth Key',
+	settingsDeepLApiKeyDesc:
+		'Authentication key from your DeepL API account. Setup: https://developers.deepl.com/docs/getting-started/auth',
+	settingsDeepLApiBaseUrlName: 'DeepL API base URL',
+	settingsDeepLApiBaseUrlDesc:
+		'Use the free endpoint by default, or switch to the Pro endpoint if needed.',
+	settingsBaiduTranslateAppIdName: 'Baidu Translate app ID',
+	settingsBaiduTranslateAppIdDesc:
+		'App ID from Baidu Translate Open Platform. Docs: https://fanyi-api.baidu.com/doc/21',
+	settingsBaiduTranslateAppIdPlaceholder: 'Baidu app ID',
+	settingsBaiduTranslateSecretKeyName: 'Baidu Translate secret key',
+	settingsBaiduTranslateSecretKeyDesc:
+		'Secret key from Baidu Translate Open Platform. Docs: https://fanyi-api.baidu.com/doc/21',
+	settingsBaiduTranslateSecretKeyPlaceholder: 'Baidu secret key',
+	settingsYoudaoTranslateAppKeyName: 'Youdao Translate app key',
+	settingsYoudaoTranslateAppKeyDesc:
+		'App key from Youdao Zhiyun translation service. Guide: https://ai.youdao.com/doc.s#guide',
+	settingsYoudaoTranslateAppKeyPlaceholder: 'Youdao app key',
+	settingsYoudaoTranslateAppSecretName: 'Youdao Translate app secret',
+	settingsYoudaoTranslateAppSecretDesc:
+		'App secret from Youdao Zhiyun translation service. Guide: https://ai.youdao.com/doc.s#guide',
+	settingsYoudaoTranslateAppSecretPlaceholder: 'Youdao app secret',
 	settingsTestName: 'Test API configuration',
 	settingsTestDesc:
-		'Send a short request to verify the base URL, API key, and model.',
+		'Send a short translation request to verify the selected provider configuration.',
 	settingsTestButton: 'Test',
 	settingsTestingButton: 'Testing...',
 	settingsTestSucceeded: 'API configuration test succeeded.',
 	settingsTestFailed: 'API configuration test failed: {message}',
 	settingsSourceLanguageName: 'Source language',
 	settingsSourceLanguageDesc:
-		'Default source language. Use Auto to let the model detect it.',
+		'Default source language. Use Auto for provider-side detection when supported.',
 	settingsTargetLanguageName: 'Target language',
 	settingsTargetLanguageDesc: 'Default target language for selected text.',
 	settingsPromptName: 'Prompt',
 	settingsPromptDesc:
-		'Use {sourceLanguage} and {targetLanguage} where the configured languages should be inserted.',
+		'Used by OpenAI-compatible providers. Use {sourceLanguage} and {targetLanguage} where the configured languages should be inserted.',
 	settingsTemperatureName: 'Temperature',
-	settingsTemperatureDesc: 'Lower values keep translations more deterministic.',
+	settingsTemperatureDesc:
+		'Lower values keep OpenAI-compatible translations more deterministic.',
 	settingsMaxSelectionLengthName: 'Maximum selection length',
 	settingsMaxSelectionLengthDesc:
 		'Longer selections are blocked to avoid accidental large sends.',
@@ -77,7 +122,12 @@ const en = {
 		'Configure an API base URL before translating.',
 	providerMissingApiKey: 'Configure an API key before translating.',
 	providerMissingModel: 'Configure a model before translating.',
+	providerMissingCredential: 'Configure {field} before translating.',
+	providerMissingTargetLanguage:
+		'Configure a target language supported by the selected provider.',
 	providerRequestFailed: 'Translation provider request failed.',
+	providerRequestFailedWithCode:
+		'Translation provider request failed. Code: {code}',
 };
 
 export type TranslationKey = keyof typeof en;
@@ -94,8 +144,18 @@ const zhCN: TranslationDictionary = {
 	settingsTabTranslation: '翻译',
 	settingsTabPopover: '悬浮窗',
 	settingsTabAdvanced: '高级',
+	settingsTranslationProviderName: '翻译服务商',
+	settingsTranslationProviderDesc:
+		'选择新翻译请求使用的服务商。所有服务商都是同级可选项。',
+	settingsProviderOpenAI: 'OpenAI 兼容',
+	settingsProviderMicrosoft: 'Bing 翻译（Microsoft Translator）',
+	settingsProviderGoogle: 'Google 翻译',
+	settingsProviderDeepL: 'DeepL',
+	settingsProviderBaidu: '百度翻译',
+	settingsProviderYoudao: '有道翻译',
 	settingsProviderHeading: 'OpenAI 兼容聊天 API',
-	settingsProviderDesc: '运行翻译时，选中文本会发送到已配置的服务商。',
+	settingsProviderDesc:
+		'选择 OpenAI 兼容翻译时，选中文本会发送到此服务商。',
 	settingsApiBaseUrlName: 'API 基础 URL',
 	settingsApiBaseUrlDesc: '服务商的基础 URL。',
 	settingsApiKeyName: 'API 密钥',
@@ -105,20 +165,57 @@ const zhCN: TranslationDictionary = {
 	settingsModelName: '模型',
 	settingsModelDesc: '服务商支持的模型名称。',
 	settingsModelPlaceholder: '模型名称',
+	settingsMicrosoftTranslatorKeyName: 'Bing/Microsoft Translator 密钥',
+	settingsMicrosoftTranslatorKeyDesc:
+		'Azure Translator 资源密钥。API 有 F0 免费层，但仍需要资源密钥。获取入口：https://learn.microsoft.com/en-us/azure/ai-services/translator/create-translator-resource',
+	settingsMicrosoftTranslatorRegionName: 'Bing/Microsoft Translator 区域',
+	settingsMicrosoftTranslatorRegionDesc:
+		'资源区域，例如 eastasia 或 global。如果当前端点不需要区域，可以留空。',
+	settingsMicrosoftTranslatorRegionPlaceholder: 'global',
+	settingsMicrosoftTranslatorEndpointName: 'Bing/Microsoft Translator 端点',
+	settingsMicrosoftTranslatorEndpointDesc:
+		'Translator 端点。除非你的资源使用其他端点，否则保持默认值。',
+	settingsGoogleTranslateApiKeyName: 'Google 翻译 API 密钥',
+	settingsGoogleTranslateApiKeyDesc:
+		'Google Cloud Translation Basic v2 的 API 密钥。可能有每月免费抵扣，但 API 调用仍需要凭据。设置入口：https://cloud.google.com/translate/docs/setup',
+	settingsDeepLApiKeyName: 'DeepL Auth Key',
+	settingsDeepLApiKeyDesc:
+		'DeepL API 账号中的认证密钥。获取入口：https://developers.deepl.com/docs/getting-started/auth',
+	settingsDeepLApiBaseUrlName: 'DeepL API 基础 URL',
+	settingsDeepLApiBaseUrlDesc:
+		'默认使用免费版端点；如果需要，可以切换为 Pro 端点。',
+	settingsBaiduTranslateAppIdName: '百度翻译 App ID',
+	settingsBaiduTranslateAppIdDesc:
+		'百度翻译开放平台中的 App ID。文档：https://fanyi-api.baidu.com/doc/21',
+	settingsBaiduTranslateAppIdPlaceholder: '百度 App ID',
+	settingsBaiduTranslateSecretKeyName: '百度翻译密钥',
+	settingsBaiduTranslateSecretKeyDesc:
+		'百度翻译开放平台中的密钥。文档：https://fanyi-api.baidu.com/doc/21',
+	settingsBaiduTranslateSecretKeyPlaceholder: '百度密钥',
+	settingsYoudaoTranslateAppKeyName: '有道翻译 App Key',
+	settingsYoudaoTranslateAppKeyDesc:
+		'有道智云翻译服务中的 App Key。新手指南：https://ai.youdao.com/doc.s#guide',
+	settingsYoudaoTranslateAppKeyPlaceholder: '有道 App Key',
+	settingsYoudaoTranslateAppSecretName: '有道翻译 App Secret',
+	settingsYoudaoTranslateAppSecretDesc:
+		'有道智云翻译服务中的 App Secret。新手指南：https://ai.youdao.com/doc.s#guide',
+	settingsYoudaoTranslateAppSecretPlaceholder: '有道 App Secret',
 	settingsTestName: '测试 API 配置',
-	settingsTestDesc: '发送一个简短请求来验证基础 URL、API 密钥和模型。',
+	settingsTestDesc: '发送一个简短翻译请求来验证当前选择的服务商配置。',
 	settingsTestButton: '测试',
 	settingsTestingButton: '测试中...',
 	settingsTestSucceeded: 'API 配置测试成功。',
 	settingsTestFailed: 'API 配置测试失败：{message}',
 	settingsSourceLanguageName: '源语言',
-	settingsSourceLanguageDesc: '默认源语言。使用 Auto 表示由模型自动识别。',
+	settingsSourceLanguageDesc:
+		'默认源语言。使用 Auto 表示由支持的服务商自动识别。',
 	settingsTargetLanguageName: '目标语言',
 	settingsTargetLanguageDesc: '选中文本的默认目标语言。',
 	settingsPromptName: '提示词',
-	settingsPromptDesc: '使用 {sourceLanguage} 和 {targetLanguage} 表示语言插入位置。',
+	settingsPromptDesc:
+		'OpenAI 兼容服务商会使用提示词。使用 {sourceLanguage} 和 {targetLanguage} 表示语言插入位置。',
 	settingsTemperatureName: '温度',
-	settingsTemperatureDesc: '较低的值会让翻译结果更稳定。',
+	settingsTemperatureDesc: '较低的值会让 OpenAI 兼容翻译结果更稳定。',
 	settingsMaxSelectionLengthName: '最大选中文本长度',
 	settingsMaxSelectionLengthDesc: '阻止过长文本，避免意外发送大量内容。',
 	settingsShowSelectedTextName: '在悬浮窗显示选中文本',
@@ -153,7 +250,10 @@ const zhCN: TranslationDictionary = {
 	providerMissingApiBaseUrl: '请先配置 API 基础 URL。',
 	providerMissingApiKey: '请先配置 API 密钥。',
 	providerMissingModel: '请先配置模型。',
+	providerMissingCredential: '请先配置 {field}。',
+	providerMissingTargetLanguage: '请配置当前服务商支持的目标语言。',
 	providerRequestFailed: '翻译服务请求失败。',
+	providerRequestFailedWithCode: '翻译服务请求失败。错误码：{code}',
 };
 
 export function t(key: TranslationKey, params?: TranslationParams): string {
