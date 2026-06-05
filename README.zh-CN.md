@@ -27,8 +27,6 @@ Selection Translator 是一个 Obsidian 插件，可以使用可自行选择的 
 ### 语言设置
 
 - 在插件设置中配置默认源语言和目标语言。
-- 也可以直接在翻译悬浮窗中调整源语言和目标语言。
-- 如果希望悬浮窗更紧凑，可以隐藏顶部语言设置。
 - 源语言使用 `Auto` 时，由支持的服务商自动识别输入语言。
 
 ### 悬浮窗工作流
@@ -67,16 +65,21 @@ Selection Translator 是一个 Obsidian 插件，可以使用可自行选择的 
 
 ## 设置
 
-设置页面按 **服务商**、**词典**、**翻译**、**悬浮窗** 和 **高级** 五个标签页分组。
+设置页面按 **服务商**、**词典配置** 和 **悬浮窗配置** 三个标签页分组。
 
 ### 服务商
 
 | 设置 | 默认值 | 说明 |
 | --- | --- | --- |
 | 翻译服务商 | `OpenAI 兼容` | 选择由哪个服务商处理非词典翻译请求。 |
+| 源语言 | `Auto` | 默认源语言。使用 `Auto` 表示由支持的服务商自动识别。 |
+| 目标语言 | `Chinese (Simplified)` | 默认目标语言。 |
 | OpenAI 兼容 API 基础 URL | `https://api.openai.com/v1` | 服务商基础 URL。必要时插件会追加 `/chat/completions`。 |
 | OpenAI 兼容 API 密钥 | 空 | 当前 OpenAI 兼容服务商的 Bearer token。 |
 | OpenAI 兼容模型 | 空 | 服务商支持的模型名称。 |
+| OpenAI 兼容提示词 | 内置 | OpenAI 兼容服务商使用的翻译指令。使用 `{sourceLanguage}` 和 `{targetLanguage}` 表示配置的语言。 |
+| OpenAI 兼容温度 | `0.2` | 较低的值会让 OpenAI 兼容翻译结果更稳定。 |
+| 最大选中文本长度 | `4000` | 阻止意外发送过长文本。此设置显示在 OpenAI 兼容选项中，但会在所有服务商请求前生效。 |
 | Bing/Microsoft Translator 密钥 | 空 | Bing 翻译使用的 Microsoft Translator 资源订阅密钥。 |
 | Bing/Microsoft Translator 区域 | 空 | 资源区域，例如 `eastasia` 或 `global`。 |
 | Bing/Microsoft Translator 端点 | `https://api.cognitive.microsofttranslator.com` | Translator 端点。 |
@@ -100,33 +103,17 @@ Google 翻译和 Bing 翻译的网页端可以免费手动使用，但本插件�
 | 有道翻译 | 需要有道智云的 App Key 和 App Secret。 | [新手指南](https://ai.youdao.com/doc.s#guide)、[应用管理](https://ai.youdao.com/appmgr.s)、[文本翻译 API 文档](https://ai.youdao.com/DOCSIRMA/html/trans/api/wbfy/index.html) | [有道文本翻译价格](https://ai.youdao.com/DOCSIRMA/html/trans/price/wbfy/index.html) |
 | 词典查询 | 不需要 API 密钥。它会把单个选中的英文单词发送到配置的词典网站，并在可用时使用该服务商的发音音频 URL。 | [有道词典](https://m.youdao.com/dict)、[必应词典](https://cn.bing.com/dict)、[剑桥词典](https://dictionary.cambridge.org/) | - |
 
-### 词典
+### 词典配置
 
 | 设置 | 默认值 | 说明 |
 | --- | --- | --- |
 | 词典服务商 | `有道词典` | 选择单词词典查询使用的词典网站。可选：有道词典、必应词典、剑桥词典。 |
 
-### 翻译
-
-| 设置 | 默认值 | 说明 |
-| --- | --- | --- |
-| 源语言 | `Auto` | 默认源语言。使用 `Auto` 表示由支持的服务商自动识别。 |
-| 目标语言 | `Chinese (Simplified)` | 默认目标语言。 |
-| 提示词 | 内置 | OpenAI 兼容服务商使用的翻译指令。使用 `{sourceLanguage}` 和 `{targetLanguage}` 表示配置的语言。 |
-
-### 悬浮窗
+### 悬浮窗配置
 
 | 设置 | 默认值 | 说明 |
 | --- | --- | --- |
 | 在悬浮窗显示选中文本 | 开启 | 将选中文本显示为可编辑输入框，便于修改后重新翻译。 |
-| 在悬浮窗显示语言设置 | 开启 | 在悬浮窗顶部显示源语言和目标语言输入框。 |
-
-### 高级
-
-| 设置 | 默认值 | 说明 |
-| --- | --- | --- |
-| 温度 | `0.2` | 较低的值会让 OpenAI 兼容翻译结果更稳定。 |
-| 最大选中文本长度 | `4000` | 阻止意外发送过长文本。 |
 
 ---
 
@@ -145,12 +132,11 @@ Google 翻译和 Bing 翻译的网页端可以免费手动使用，但本插件�
 2. 运行 **Translate selection**。
 3. 使用结果标题行中的发音按钮播放英音或美音。
 
-### 在悬浮窗调整语言方向
+### 调整语言方向
 
-1. 保持 **在悬浮窗显示语言设置** 为开启。
-2. 在悬浮窗顶部修改 **源** 和 **目标**。
-3. 选择 **重新翻译**，使用新的语言方向重试当前源文本。
-4. 后续翻译会使用最新的语言值。
+1. 打开插件设置。
+2. 在 **服务商** 标签页修改 **源语言** 和 **目标语言**。
+3. 再次运行 **Translate selection**。后续翻译会使用保存后的语言值。
 
 ### 等待下一次选择
 
@@ -214,11 +200,6 @@ BRAT 会从 GitHub release 安装插件文件。每个 release 都需要包含 `
 - 确认当前 Markdown 编辑器或可选择 PDF 文本层中有选中文本。
 - 尝试从命令面板运行 **Translate selection**。
 - 对于 PDF，确认它有可选择文本，而不是只有扫描图片。
-
-### 悬浮窗里看不到语言设置
-
-- 在插件设置中开启 **在悬浮窗显示语言设置**。
-- 在非常窄的屏幕上，语言输入可能会换到图标按钮上方，以避免重叠。
 
 ### 源语言没有明显影响输出
 

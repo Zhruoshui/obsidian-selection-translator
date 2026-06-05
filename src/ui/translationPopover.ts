@@ -6,21 +6,9 @@ import type {
 } from '../translation/task';
 
 type CloseHandler = () => void;
-type LanguageChangeHandler = (
-	sourceLanguage: string,
-	targetLanguage: string,
-) => void;
 
 export interface TranslationPopoverOptions {
 	showSelectedText: boolean;
-	showLanguageControls: boolean;
-	sourceLanguage: string;
-	targetLanguage: string;
-}
-
-interface LanguageValues {
-	sourceLanguage: string;
-	targetLanguage: string;
 }
 
 export class TranslationPopover {
@@ -42,7 +30,6 @@ export class TranslationPopover {
 	constructor(
 		private readonly onRetry: (sourceText: string) => void,
 		private readonly onClose: CloseHandler,
-		private readonly onLanguageChange: LanguageChangeHandler,
 	) {}
 
 	show(task: TranslationTask, options: TranslationPopoverOptions) {
@@ -52,10 +39,10 @@ export class TranslationPopover {
 		this.position();
 	}
 
-	showIdle(options: TranslationPopoverOptions) {
+	showIdle() {
 		this.currentTask = null;
 		this.ensureContainer();
-		this.renderIdle(options);
+		this.renderIdle();
 		this.position();
 	}
 
@@ -113,13 +100,9 @@ export class TranslationPopover {
 		}
 
 		const sourceText = getSourceInputValue(this.containerEl) ?? task.raw;
-		const languageValues =
-			getLanguageInputValues(this.containerEl) ?? getLanguageValues(options);
 
 		this.containerEl.replaceChildren();
-		this.containerEl.appendChild(
-			this.createHeader(task, options, languageValues),
-		);
+		this.containerEl.appendChild(this.createHeader(task));
 
 		const contentEl = activeDocument.createElement('div');
 		contentEl.className = 'selection-translator-popover__content';
@@ -137,18 +120,13 @@ export class TranslationPopover {
 		this.containerEl.appendChild(this.createResizeHandle());
 	}
 
-	private renderIdle(options: TranslationPopoverOptions) {
+	private renderIdle() {
 		if (!this.containerEl) {
 			return;
 		}
 
-		const languageValues =
-			getLanguageInputValues(this.containerEl) ?? getLanguageValues(options);
-
 		this.containerEl.replaceChildren();
-		this.containerEl.appendChild(
-			this.createHeader(null, options, languageValues),
-		);
+		this.containerEl.appendChild(this.createHeader(null));
 		const contentEl = activeDocument.createElement('div');
 		contentEl.className = 'selection-translator-popover__content';
 		contentEl.appendChild(
@@ -158,24 +136,17 @@ export class TranslationPopover {
 		this.containerEl.appendChild(this.createResizeHandle());
 	}
 
-	private createHeader(
-		task: TranslationTask | null,
-		options: TranslationPopoverOptions,
-		languageValues: LanguageValues,
-	) {
+	private createHeader(task: TranslationTask | null) {
 		const headerEl = activeDocument.createElement('div');
 		headerEl.className = 'selection-translator-popover__header';
 		headerEl.addEventListener('pointerdown', (event) => {
 			this.handlePointerDown(event);
 		});
 
-		if (options.showLanguageControls) {
-			headerEl.appendChild(
-				createLanguageControls(languageValues, () => {
-					this.commitLanguageControlValues();
-				}),
-			);
-		}
+		const titleEl = activeDocument.createElement('div');
+		titleEl.className = 'selection-translator-popover__title';
+		titleEl.textContent = t('popoverTitle');
+		headerEl.appendChild(titleEl);
 
 		const actionsEl = activeDocument.createElement('div');
 		actionsEl.className = 'selection-translator-popover__header-actions';
@@ -193,7 +164,6 @@ export class TranslationPopover {
 			if (!task) {
 				return;
 			}
-			this.commitLanguageControlValues();
 			this.onRetry(getSourceInputValue(this.containerEl) ?? task.raw);
 		});
 		actionsEl.appendChild(retryButton);
@@ -205,14 +175,6 @@ export class TranslationPopover {
 		headerEl.appendChild(actionsEl);
 
 		return headerEl;
-	}
-
-	private commitLanguageControlValues() {
-		const values = getLanguageInputValues(this.containerEl);
-		if (!values) {
-			return;
-		}
-		this.onLanguageChange(values.sourceLanguage, values.targetLanguage);
 	}
 
 	private createResizeHandle() {
@@ -543,68 +505,6 @@ function createEditableSection(label: string, text: string) {
 	return sectionEl;
 }
 
-function createLanguageControls(
-	values: LanguageValues,
-	onChange: () => void,
-) {
-	const controlsEl = activeDocument.createElement('div');
-	controlsEl.className = 'selection-translator-popover__language-controls';
-
-	controlsEl.appendChild(
-		createLanguageField({
-			className: 'selection-translator-popover__language-input--source',
-			label: t('popoverSourceLanguage'),
-			placeholder: t('popoverSourceLanguagePlaceholder'),
-			value: values.sourceLanguage,
-			onChange,
-		}),
-	);
-
-	const separatorEl = activeDocument.createElement('span');
-	separatorEl.className = 'selection-translator-popover__language-separator';
-	separatorEl.textContent = '->';
-	separatorEl.setAttribute('aria-hidden', 'true');
-	controlsEl.appendChild(separatorEl);
-
-	controlsEl.appendChild(
-		createLanguageField({
-			className: 'selection-translator-popover__language-input--target',
-			label: t('popoverTargetLanguage'),
-			placeholder: t('popoverTargetLanguagePlaceholder'),
-			value: values.targetLanguage,
-			onChange,
-		}),
-	);
-
-	return controlsEl;
-}
-
-function createLanguageField(options: {
-	className: string;
-	label: string;
-	placeholder: string;
-	value: string;
-	onChange: () => void;
-}) {
-	const fieldEl = activeDocument.createElement('label');
-	fieldEl.className = 'selection-translator-popover__language-field';
-
-	const labelEl = activeDocument.createElement('span');
-	labelEl.className = 'selection-translator-popover__language-label';
-	labelEl.textContent = options.label;
-	fieldEl.appendChild(labelEl);
-
-	const inputEl = activeDocument.createElement('input');
-	inputEl.className = `selection-translator-popover__language-input ${options.className}`;
-	inputEl.type = 'text';
-	inputEl.placeholder = options.placeholder;
-	inputEl.value = options.value;
-	inputEl.addEventListener('input', options.onChange);
-	fieldEl.appendChild(inputEl);
-
-	return fieldEl;
-}
-
 function getSourceInputValue(containerEl: HTMLElement | null) {
 	const inputEl = containerEl?.querySelector(
 		'.selection-translator-popover__source-input',
@@ -613,35 +513,6 @@ function getSourceInputValue(containerEl: HTMLElement | null) {
 		return null;
 	}
 	return inputEl.value;
-}
-
-function getLanguageInputValues(
-	containerEl: HTMLElement | null,
-): LanguageValues | null {
-	const sourceInputEl = containerEl?.querySelector(
-		'.selection-translator-popover__language-input--source',
-	);
-	const targetInputEl = containerEl?.querySelector(
-		'.selection-translator-popover__language-input--target',
-	);
-	if (
-		!(sourceInputEl instanceof HTMLInputElement) ||
-		!(targetInputEl instanceof HTMLInputElement)
-	) {
-		return null;
-	}
-
-	return {
-		sourceLanguage: sourceInputEl.value,
-		targetLanguage: targetInputEl.value,
-	};
-}
-
-function getLanguageValues(options: TranslationPopoverOptions): LanguageValues {
-	return {
-		sourceLanguage: options.sourceLanguage,
-		targetLanguage: options.targetLanguage,
-	};
 }
 
 function createIconButton(icon: string, label: string) {

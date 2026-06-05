@@ -47,7 +47,6 @@ export interface SelectionTranslatorSettings {
 	temperature: number;
 	maxSelectionLength: number;
 	showSelectedTextInPopover: boolean;
-	showLanguageControlsInPopover: boolean;
 }
 
 export const LEGACY_DEFAULT_PROMPT =
@@ -78,30 +77,20 @@ export const DEFAULT_SETTINGS: SelectionTranslatorSettings = {
 	temperature: 0.2,
 	maxSelectionLength: 4000,
 	showSelectedTextInPopover: true,
-	showLanguageControlsInPopover: true,
 };
 
-type SettingsTabId =
-	| 'provider'
-	| 'dictionary'
-	| 'translation'
-	| 'popover'
-	| 'advanced';
+type SettingsTabId = 'provider' | 'dictionary' | 'popover';
 
 const SETTINGS_TABS: Array<{
 	id: SettingsTabId;
 	labelKey:
 		| 'settingsTabProvider'
 		| 'settingsTabDictionary'
-		| 'settingsTabTranslation'
-		| 'settingsTabPopover'
-		| 'settingsTabAdvanced';
+		| 'settingsTabPopover';
 }> = [
 	{ id: 'provider', labelKey: 'settingsTabProvider' },
 	{ id: 'dictionary', labelKey: 'settingsTabDictionary' },
-	{ id: 'translation', labelKey: 'settingsTabTranslation' },
 	{ id: 'popover', labelKey: 'settingsTabPopover' },
-	{ id: 'advanced', labelKey: 'settingsTabAdvanced' },
 ];
 
 const TRANSLATION_PROVIDERS: Array<{
@@ -187,14 +176,8 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 			case 'dictionary':
 				this.renderDictionarySettings(panelEl);
 				return;
-			case 'translation':
-				this.renderTranslationSettings(panelEl);
-				return;
 			case 'popover':
 				this.renderPopoverSettings(panelEl);
-				return;
-			case 'advanced':
-				this.renderAdvancedSettings(panelEl);
 				return;
 		}
 	}
@@ -219,6 +202,8 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 						this.display();
 					});
 			});
+
+		this.renderLanguageSettings(containerEl);
 
 		switch (selectedProvider) {
 			case 'openai':
@@ -306,6 +291,8 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
+
+		this.renderOpenAITranslationSettings(containerEl);
 	}
 
 	private renderTestProviderSetting(containerEl: HTMLElement) {
@@ -482,7 +469,7 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 			});
 	}
 
-	private renderTranslationSettings(containerEl: HTMLElement) {
+	private renderLanguageSettings(containerEl: HTMLElement) {
 		new Setting(containerEl)
 			.setName(t('settingsSourceLanguageName'))
 			.setDesc(t('settingsSourceLanguageDesc'))
@@ -510,7 +497,9 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
+	}
 
+	private renderOpenAITranslationSettings(containerEl: HTMLElement) {
 		new Setting(containerEl)
 			.setName(t('settingsPromptName'))
 			.setDesc(t('settingsPromptDesc'))
@@ -524,9 +513,7 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
-	}
 
-	private renderAdvancedSettings(containerEl: HTMLElement) {
 		new Setting(containerEl)
 			.setName(t('settingsTemperatureName'))
 			.setDesc(t('settingsTemperatureDesc'))
@@ -575,18 +562,6 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.showSelectedTextInPopover)
 					.onChange(async (value) => {
 						this.plugin.settings.showSelectedTextInPopover = value;
-						await this.plugin.saveSettings();
-					}),
-			);
-
-		new Setting(containerEl)
-			.setName(t('settingsShowLanguageControlsName'))
-			.setDesc(t('settingsShowLanguageControlsDesc'))
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.showLanguageControlsInPopover)
-					.onChange(async (value) => {
-						this.plugin.settings.showLanguageControlsInPopover = value;
 						await this.plugin.saveSettings();
 					}),
 			);

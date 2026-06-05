@@ -7,10 +7,8 @@ const en = {
 	noticeSelectionTooLong: 'Selection is too long. Limit: {limit} characters.',
 
 	settingsTabProvider: 'Provider',
-	settingsTabDictionary: 'Dictionary',
-	settingsTabTranslation: 'Translation',
-	settingsTabPopover: 'Popover',
-	settingsTabAdvanced: 'Advanced',
+	settingsTabDictionary: 'Dictionary config',
+	settingsTabPopover: 'Popover config',
 	settingsTranslationProviderName: 'Translation provider',
 	settingsTranslationProviderDesc:
 		'Choose the provider used for text translation. One selected English word is looked up in the dictionary automatically.',
@@ -97,16 +95,9 @@ const en = {
 	settingsShowSelectedTextName: 'Show selected text in popover',
 	settingsShowSelectedTextDesc:
 		'Display the selected text as an editable field before translating again.',
-	settingsShowLanguageControlsName: 'Show language controls in popover',
-	settingsShowLanguageControlsDesc:
-		'Display source and target language fields in the translation popover header.',
 
 	popoverAriaLabel: 'Selection translation',
 	popoverTitle: 'Selection translation',
-	popoverSourceLanguage: 'From',
-	popoverSourceLanguagePlaceholder: 'Auto',
-	popoverTargetLanguage: 'To',
-	popoverTargetLanguagePlaceholder: 'Target language',
 	popoverSelectedText: 'Selected text',
 	popoverSelectedTextPlaceholder: 'Edit text to translate',
 	popoverCopy: 'Copy',
@@ -155,10 +146,8 @@ const zhCN: TranslationDictionary = {
 	noticeSelectionTooLong: '选中文本过长。限制：{limit} 个字符。',
 
 	settingsTabProvider: '服务商',
-	settingsTabDictionary: '词典',
-	settingsTabTranslation: '翻译',
-	settingsTabPopover: '悬浮窗',
-	settingsTabAdvanced: '高级',
+	settingsTabDictionary: '词典配置',
+	settingsTabPopover: '悬浮窗配置',
 	settingsTranslationProviderName: '翻译服务商',
 	settingsTranslationProviderDesc:
 		'选择文本翻译使用的服务商。只选择一个英文单词时会自动走词典查询。',
@@ -242,15 +231,9 @@ const zhCN: TranslationDictionary = {
 	settingsShowSelectedTextName: '在悬浮窗显示选中文本',
 	settingsShowSelectedTextDesc:
 		'将选中文本显示为可编辑输入框，便于修改后重新翻译。',
-	settingsShowLanguageControlsName: '在悬浮窗显示语言设置',
-	settingsShowLanguageControlsDesc: '在翻译悬浮窗顶部显示源语言和目标语言输入框。',
 
 	popoverAriaLabel: '划词翻译',
 	popoverTitle: '划词翻译',
-	popoverSourceLanguage: '源',
-	popoverSourceLanguagePlaceholder: 'Auto',
-	popoverTargetLanguage: '目标',
-	popoverTargetLanguagePlaceholder: '目标语言',
 	popoverSelectedText: '选中文本',
 	popoverSelectedTextPlaceholder: '编辑要翻译的文本',
 	popoverCopy: '复制',

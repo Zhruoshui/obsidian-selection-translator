@@ -44,9 +44,6 @@ export default class SelectionTranslatorPlugin extends Plugin {
 				this.stopCurrentTranslation();
 				this.lastTranslatedSelection = '';
 			},
-			(sourceLanguage, targetLanguage) => {
-				void this.updateLanguageSettings(sourceLanguage, targetLanguage);
-			},
 		);
 
 		registerSelectionTranslationCommands(this);
@@ -62,12 +59,19 @@ export default class SelectionTranslatorPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<SelectionTranslatorSettings>,
-		);
+		const savedSettings = ((await this.loadData()) ?? {}) as Partial<
+			SelectionTranslatorSettings
+		> & {
+			showLanguageControlsInPopover?: unknown;
+		};
 		let shouldSaveSettings = false;
+
+		if ('showLanguageControlsInPopover' in savedSettings) {
+			delete savedSettings.showLanguageControlsInPopover;
+			shouldSaveSettings = true;
+		}
+
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, savedSettings);
 
 		if (this.settings.prompt === LEGACY_DEFAULT_PROMPT) {
 			this.settings.prompt = DEFAULT_SETTINGS.prompt;
@@ -122,7 +126,7 @@ export default class SelectionTranslatorPlugin extends Plugin {
 
 		if (!this.popover.isOpen()) {
 			this.lastTranslatedSelection = '';
-			this.popover.showIdle(this.getPopoverOptions());
+			this.popover.showIdle();
 		}
 	}
 
@@ -190,31 +194,7 @@ export default class SelectionTranslatorPlugin extends Plugin {
 	private getPopoverOptions() {
 		return {
 			showSelectedText: this.settings.showSelectedTextInPopover,
-			showLanguageControls: this.settings.showLanguageControlsInPopover,
-			sourceLanguage: this.settings.sourceLanguage,
-			targetLanguage: this.settings.targetLanguage,
 		};
-	}
-
-	private async updateLanguageSettings(
-		sourceLanguage: string,
-		targetLanguage: string,
-	) {
-		const normalizedSource =
-			sourceLanguage.trim() || DEFAULT_SETTINGS.sourceLanguage;
-		const normalizedTarget =
-			targetLanguage.trim() || DEFAULT_SETTINGS.targetLanguage;
-
-		if (
-			this.settings.sourceLanguage === normalizedSource &&
-			this.settings.targetLanguage === normalizedTarget
-		) {
-			return;
-		}
-
-		this.settings.sourceLanguage = normalizedSource;
-		this.settings.targetLanguage = normalizedTarget;
-		await this.saveSettings();
 	}
 
 	private scheduleOpenPopoverSelectionTranslation() {

@@ -4,9 +4,9 @@
 	display: flex;
 	flex-direction: column;
 	container-type: inline-size;
-	width: min(380px, calc(100vw - 16px));
+	width: min(340px, calc(100vw - 16px));
 	max-width: calc(100vw - 16px);
-	max-height: min(480px, calc(100vh - 16px));
+	max-height: min(420px, calc(100vh - 16px));
 	overflow: hidden;
 	padding: 0;
 	border: 1px solid var(--background-modifier-border-hover);
@@ -25,9 +25,9 @@
 .selection-translator-popover__header {
 	display: flex;
 	align-items: center;
-	gap: 4px;
-	min-height: 36px;
-	padding: 5px 6px;
+	gap: 6px;
+	min-height: 32px;
+	padding: 3px 5px 3px 8px;
 	border-bottom: 1px solid var(--background-modifier-border);
 	background: var(--background-secondary);
 	cursor: move;
@@ -35,56 +35,15 @@
 	touch-action: none;
 }
 
-.selection-translator-popover__language-controls {
-	display: flex;
+.selection-translator-popover__title {
 	flex: 1 1 auto;
-	align-items: center;
-	gap: 4px;
-	min-width: 0;
-}
-
-.selection-translator-popover__language-field {
-	display: flex;
-	flex: 1 1 0;
-	align-items: center;
-	gap: 3px;
 	min-width: 0;
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
-	user-select: text;
-}
-
-.selection-translator-popover__language-label {
-	flex: 0 0 auto;
 	font-weight: 600;
+	overflow: hidden;
+	text-overflow: ellipsis;
 	white-space: nowrap;
-}
-
-.selection-translator-popover__language-input {
-	box-sizing: border-box;
-	width: 100%;
-	min-width: 0;
-	height: 26px;
-	padding: 2px 5px;
-	border: 1px solid var(--background-modifier-border);
-	border-radius: 6px;
-	background: var(--background-primary);
-	color: var(--text-normal);
-	font-size: var(--font-ui-smaller);
-	cursor: text;
-	user-select: text;
-}
-
-.selection-translator-popover__language-input:focus {
-	border-color: var(--interactive-accent);
-	box-shadow: 0 0 0 1px var(--interactive-accent);
-	outline: none;
-}
-
-.selection-translator-popover__language-separator {
-	flex: 0 0 auto;
-	color: var(--text-faint);
-	font-size: var(--font-ui-smaller);
 }
 
 .selection-translator-popover__header-actions {
@@ -105,8 +64,8 @@
 }
 
 .selection-translator-popover--sized {
-	min-width: min(320px, calc(100vw - 16px));
-	min-height: min(240px, calc(100vh - 16px));
+	min-width: min(300px, calc(100vw - 16px));
+	min-height: min(220px, calc(100vh - 16px));
 	max-height: calc(100vh - 16px);
 }
 
@@ -114,10 +73,10 @@
 	display: flex;
 	flex: 1 1 auto;
 	flex-direction: column;
-	gap: 8px;
+	gap: 6px;
 	min-height: 0;
 	overflow: auto;
-	padding: 8px;
+	padding: 6px;
 }
 
 .selection-translator-popover__section {
@@ -131,7 +90,7 @@
 }
 
 .selection-translator-popover__label {
-	padding: 5px 8px 0;
+	padding: 4px 7px 0;
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
 	font-weight: 600;
@@ -143,7 +102,7 @@
 	justify-content: space-between;
 	gap: 6px;
 	min-width: 0;
-	padding: 5px 8px 0;
+	padding: 4px 7px 0;
 }
 
 .selection-translator-popover__section-header
@@ -181,10 +140,10 @@
 }
 
 .selection-translator-popover__body {
-	min-height: 48px;
+	min-height: 42px;
 	max-height: none;
 	overflow: auto;
-	padding: 5px 8px 8px;
+	padding: 4px 7px 7px;
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
 	font-size: var(--font-ui-small);
@@ -196,8 +155,8 @@
 .selection-translator-popover__result-output {
 	box-sizing: border-box;
 	width: 100%;
-	min-height: 72px;
-	padding: 5px 8px 8px;
+	min-height: 64px;
+	padding: 4px 7px 7px;
 	border: 0;
 	background: transparent;
 	color: var(--text-normal);
@@ -219,8 +178,8 @@
 }
 
 .selection-translator-icon-button {
-	width: 26px;
-	height: 26px;
+	width: 24px;
+	height: 24px;
 	padding: 0;
 	justify-content: center;
 	cursor: pointer;
@@ -252,23 +211,7 @@
 	border-bottom: 2px solid var(--text-faint);
 }
 
-@media (max-width: 360px) {
-	.selection-translator-popover__header {
-		flex-wrap: wrap;
-	}
-
-	.selection-translator-popover__language-controls {
-		flex-basis: 100%;
-		order: 1;
-	}
-
-	.selection-translator-popover__header-actions {
-		order: 2;
-		width: 100%;
-	}
-}
-
-@container (min-width: 560px) {
+@container (min-width: 520px) {
 	.selection-translator-popover__content {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

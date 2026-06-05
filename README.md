@@ -24,11 +24,9 @@ Selection Translator is an Obsidian plugin for translating selected Markdown edi
 - Edit the selected source text in the popover and translate again.
 - Automatically look up one selected English word with the configured dictionary provider and play UK/US pronunciations when available.
 
-### Language Controls
+### Language Defaults
 
 - Set default source and target languages in plugin settings.
-- Adjust source and target languages directly in the translation popover.
-- Hide the popover language controls when you prefer a compact header.
 - Use `Auto` as the source language when you want a supported provider to detect the input language.
 
 ### Popover Workflow
@@ -67,16 +65,21 @@ The default prompt translates from `Auto` into `Chinese (Simplified)` and return
 
 ## Settings
 
-The settings page is grouped into **Provider**, **Dictionary**, **Translation**, **Popover**, and **Advanced** tabs.
+The settings page is grouped into **Provider**, **Dictionary config**, and **Popover config** tabs.
 
 ### Provider
 
 | Setting | Default | Description |
 | --- | --- | --- |
 | Translation provider | `OpenAI-compatible` | Selects which provider handles non-dictionary translation requests. |
+| Source language | `Auto` | Default source language. Use `Auto` for provider-side detection when supported. |
+| Target language | `Chinese (Simplified)` | Default target language. |
 | OpenAI-compatible API base URL | `https://api.openai.com/v1` | Provider base URL. The plugin appends `/chat/completions` when needed. |
 | OpenAI-compatible API key | empty | Bearer token for the configured OpenAI-compatible provider. |
 | OpenAI-compatible model | empty | Model name supported by your provider. |
+| OpenAI-compatible prompt | built in | Translation instruction for OpenAI-compatible providers. Use `{sourceLanguage}` and `{targetLanguage}` for the configured languages. |
+| OpenAI-compatible temperature | `0.2` | Lower values keep OpenAI-compatible translations more deterministic. |
+| Maximum selection length | `4000` | Blocks accidental large sends. This setting is shown with OpenAI-compatible options but applies before every provider request. |
 | Bing/Microsoft Translator key | empty | Subscription key for the Microsoft Translator resource used by Bing Translate. |
 | Bing/Microsoft Translator region | empty | Resource region, such as `eastasia` or `global`. |
 | Bing/Microsoft Translator endpoint | `https://api.cognitive.microsofttranslator.com` | Translator endpoint. |
@@ -105,33 +108,17 @@ credentials.
 | Youdao Translate | Requires a Youdao Zhiyun app key and app secret. | [Youdao new user guide](https://ai.youdao.com/doc.s#guide), [App management](https://ai.youdao.com/appmgr.s), [Text translation API docs](https://ai.youdao.com/DOCSIRMA/html/trans/api/wbfy/index.html) | [Youdao text translation pricing](https://ai.youdao.com/DOCSIRMA/html/trans/price/wbfy/index.html) |
 | Dictionary lookup | No API key is required. It sends one selected English word to the configured dictionary website and uses pronunciation audio URLs from that provider when available. | [Youdao Dictionary](https://m.youdao.com/dict), [Bing Dictionary](https://cn.bing.com/dict), [Cambridge Dictionary](https://dictionary.cambridge.org/) | - |
 
-### Dictionary
+### Dictionary Config
 
 | Setting | Default | Description |
 | --- | --- | --- |
 | Dictionary provider | `Youdao Dictionary` | Selects which dictionary website handles one-word dictionary lookup. Options: Youdao Dictionary, Bing Dictionary, Cambridge Dictionary. |
 
-### Translation
-
-| Setting | Default | Description |
-| --- | --- | --- |
-| Source language | `Auto` | Default source language. Use `Auto` for provider-side detection when supported. |
-| Target language | `Chinese (Simplified)` | Default target language. |
-| Prompt | built in | Translation instruction for OpenAI-compatible providers. Use `{sourceLanguage}` and `{targetLanguage}` for the configured languages. |
-
-### Popover
+### Popover Config
 
 | Setting | Default | Description |
 | --- | --- | --- |
 | Show selected text in popover | enabled | Shows selected text as an editable field before retrying. |
-| Show language controls in popover | enabled | Shows source and target language fields in the popover header. |
-
-### Advanced
-
-| Setting | Default | Description |
-| --- | --- | --- |
-| Temperature | `0.2` | Lower values keep OpenAI-compatible translations more deterministic. |
-| Maximum selection length | `4000` | Blocks accidental large sends. |
 
 ---
 
@@ -150,12 +137,11 @@ credentials.
 2. Run **Translate selection**.
 3. Use the pronunciation buttons in the result header to play UK or US audio.
 
-### Popover Language Direction
+### Language Direction
 
-1. Keep **Show language controls in popover** enabled.
-2. Change **From** and **To** in the popover header.
-3. Select **Translate again** to retry the current source text with the new language direction.
-4. Later translations use the latest language values.
+1. Open the plugin settings.
+2. Change **Source language** and **Target language** in the **Provider** tab.
+3. Run **Translate selection** again. Later translations use the saved language values.
 
 ### Waiting For The Next Selection
 
@@ -219,11 +205,6 @@ Reload Obsidian and enable the plugin in **Settings -> Community plugins**.
 - Confirm text is selected in the active Markdown editor or a selectable PDF text layer.
 - Try the command palette command **Translate selection**.
 - For PDF files, confirm the PDF has selectable text and is not only a scanned image.
-
-### Language controls are not visible
-
-- Enable **Show language controls in popover** in plugin settings.
-- On very narrow screens, the language controls may wrap above the icon button row to avoid overlap.
 
 ### Source language does not affect output
 
