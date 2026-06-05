@@ -1,6 +1,9 @@
 import { Notice, setIcon } from 'obsidian';
 import { t } from '../i18n';
-import type { TranslationTask } from '../translation/task';
+import type {
+	PronunciationAudio,
+	TranslationTask,
+} from '../translation/task';
 
 type CloseHandler = () => void;
 type LanguageChangeHandler = (
@@ -127,7 +130,9 @@ export class TranslationPopover {
 		}
 
 		const resultText = getResultText(task);
-		contentEl.appendChild(createResultSection(getResultLabel(task), resultText));
+		contentEl.appendChild(
+			createResultSection(getResultLabel(task), resultText, task.audio),
+		);
 		this.containerEl.appendChild(contentEl);
 		this.containerEl.appendChild(this.createResizeHandle());
 	}
@@ -448,14 +453,27 @@ function createSection(label: string, text: string) {
 	return sectionEl;
 }
 
-function createResultSection(label: string, text: string) {
+function createResultSection(
+	label: string,
+	text: string,
+	audio: PronunciationAudio[],
+) {
 	const sectionEl = activeDocument.createElement('section');
 	sectionEl.className = 'selection-translator-popover__section';
 
-	const labelEl = activeDocument.createElement('div');
+	const headerEl = activeDocument.createElement('div');
+	headerEl.className = 'selection-translator-popover__section-header';
+
+	const labelEl = activeDocument.createElement('span');
 	labelEl.className = 'selection-translator-popover__label';
 	labelEl.textContent = label;
-	sectionEl.appendChild(labelEl);
+	headerEl.appendChild(labelEl);
+
+	if (audio.length > 0) {
+		headerEl.appendChild(createPronunciationControls(audio));
+	}
+
+	sectionEl.appendChild(headerEl);
 
 	const outputEl = activeDocument.createElement('textarea');
 	outputEl.className = 'selection-translator-popover__result-output';
@@ -466,6 +484,44 @@ function createResultSection(label: string, text: string) {
 	sectionEl.appendChild(outputEl);
 
 	return sectionEl;
+}
+
+function createPronunciationControls(audio: PronunciationAudio[]) {
+	const controlsEl = activeDocument.createElement('div');
+	controlsEl.className = 'selection-translator-popover__audio-controls';
+
+	for (const item of audio) {
+		const button = activeDocument.createElement('button');
+		button.type = 'button';
+		button.className =
+			'clickable-icon selection-translator-popover__audio-button';
+		const pronunciationLabel = formatPronunciationLabel(item);
+		const title = t('popoverPlayPronunciation', {
+			label: pronunciationLabel,
+		});
+		button.setAttribute('aria-label', title);
+		button.setAttribute('title', title);
+		setIcon(button, 'volume-2');
+
+		const labelEl = activeDocument.createElement('span');
+		labelEl.className = 'selection-translator-popover__audio-label';
+		labelEl.textContent = item.label;
+		button.appendChild(labelEl);
+
+		button.addEventListener('click', () => {
+			void playAudio(item.url);
+		});
+		controlsEl.appendChild(button);
+	}
+
+	return controlsEl;
+}
+
+function formatPronunciationLabel(audio: PronunciationAudio) {
+	if (!audio.phonetic) {
+		return audio.label;
+	}
+	return `${audio.label} [${audio.phonetic}]`;
 }
 
 function createEditableSection(label: string, text: string) {
@@ -667,4 +723,9 @@ async function copyToClipboard(text: string) {
 
 	await navigator.clipboard.writeText(text);
 	new Notice(t('popoverCopied'));
+}
+
+async function playAudio(url: string) {
+	const audio = new Audio(url);
+	await audio.play();
 }

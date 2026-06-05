@@ -11,7 +11,7 @@
 [常见问题](#常见问题) |
 [开发](#开发)
 
-Selection Translator 是一个 Obsidian 插件，可以使用可自行选择的 AI 或传统翻译服务商翻译 Markdown 编辑器或 PDF 中选中的文本。
+Selection Translator 是一个 Obsidian 插件，可以使用可自行选择的 AI、传统翻译或词典服务商翻译 Markdown 编辑器或 PDF 中选中的文本。
 
 ---
 
@@ -22,6 +22,7 @@ Selection Translator 是一个 Obsidian 插件，可以使用可自行选择的 
 - 通过命令面板、快捷键、左侧功能区按钮或 Markdown 编辑器右键菜单翻译选中的 Markdown 或可选择 PDF 文本。
 - 悬浮窗保持打开时，继续选择其他 Markdown 或 PDF 文本会自动翻译新的选择。
 - 可以在悬浮窗中编辑源文本后重新翻译。
+- 使用词典服务商时，可以查询一个选中的英文单词，并播放英音/美音发音。
 
 ### 语言设置
 
@@ -39,9 +40,10 @@ Selection Translator 是一个 Obsidian 插件，可以使用可自行选择的 
 
 ### 服务商支持
 
-- 用户自行选择翻译服务商。OpenAI 兼容服务商、Bing 翻译（Microsoft Translator）、Google 翻译、DeepL、百度翻译和有道翻译都是同级选项。
+- 用户自行选择翻译服务商。OpenAI 兼容服务商、Bing 翻译（Microsoft Translator）、Google 翻译、DeepL、百度翻译、有道翻译和词典都是同级选项。
 - 根据当前选择的服务商配置所需凭据。
 - OpenAI 兼容服务商支持提示词、温度和流式输出。传统翻译 API 会在服务商请求完成后返回译文。
+- 词典服务商使用 Dict.cn/海词查询英文单词，不需要 API 密钥。
 - 翻译前可以测试服务商配置是否可用。
 - 插件界面跟随 Obsidian 应用语言，目前支持 English 和简体中文。
 
@@ -84,9 +86,10 @@ Selection Translator 是一个 Obsidian 插件，可以使用可自行选择的 
 | 百度翻译密钥 | 空 | 百度翻译开放平台中的密钥。 |
 | 有道翻译 App Key | 空 | 有道智云翻译服务中的 App Key。 |
 | 有道翻译 App Secret | 空 | 有道智云翻译服务中的 App Secret。 |
+| 词典查询 | 无 | 使用 Dict.cn/海词查询一个选中的英文单词，并显示英音/美音发音按钮。 |
 | 测试 API 配置 | - | 发送一个简短翻译请求，验证当前选择的服务商配置。 |
 
-Google 翻译和 Bing 翻译的网页端可以免费手动使用，但本插件调用的是官方 API。即使服务商提供免费额度或免费层，API 调用也仍然需要配置对应的凭据。
+Google 翻译和 Bing 翻译的网页端可以免费手动使用，但本插件对这些翻译服务商调用的是官方 API。即使服务商提供免费额度或免费层，API 调用也仍然需要配置对应的凭据。词典服务商是独立选项，使用 Dict.cn/海词查询，不需要 API 凭据。
 
 | 服务商 | API 使用说明 | Key 获取入口 | 价格说明 |
 | --- | --- | --- | --- |
@@ -95,6 +98,7 @@ Google 翻译和 Bing 翻译的网页端可以免费手动使用，但本插件�
 | DeepL | 需要 DeepL API 账号和 Auth Key。API Free 使用 `https://api-free.deepl.com`，API Pro 使用 `https://api.deepl.com`。 | [DeepL API 鉴权](https://developers.deepl.com/docs/getting-started/auth) | [DeepL API 套餐](https://www.deepl.com/pro-api) |
 | 百度翻译 | 需要百度翻译开放平台的 App ID 和密钥。 | [百度翻译 API 文档](https://fanyi-api.baidu.com/doc/21)、[开放平台官网](https://fanyi-api.baidu.com/) | [百度翻译产品](https://fanyi-api.baidu.com/product/11) |
 | 有道翻译 | 需要有道智云的 App Key 和 App Secret。 | [新手指南](https://ai.youdao.com/doc.s#guide)、[应用管理](https://ai.youdao.com/appmgr.s)、[文本翻译 API 文档](https://ai.youdao.com/DOCSIRMA/html/trans/api/wbfy/index.html) | [有道文本翻译价格](https://ai.youdao.com/DOCSIRMA/html/trans/price/wbfy/index.html) |
+| 词典 | 不需要 API 密钥。它会把选中的单词发送到 Dict.cn/海词查询，并使用 Dict.cn 发音音频 URL。 | [Dict.cn](https://dict.cn/) | - |
 
 ### 翻译
 
@@ -129,6 +133,13 @@ Google 翻译和 Bing 翻译的网页端可以免费手动使用，但本插件�
 3. 在悬浮窗中查看流式译文。
 4. 如果只需要复制某个词句或段落，可以直接选择译文中的任意部分并复制。
 
+### 词典查询
+
+1. 将翻译服务商切换为 **词典（英文单词）**。
+2. 在 Markdown 或可选择的 PDF 文本层中选择一个英文单词。
+3. 运行 **Translate selection**。
+4. 使用结果标题行中的发音按钮播放英音或美音。
+
 ### 在悬浮窗调整语言方向
 
 1. 保持 **在悬浮窗显示语言设置** 为开启。
@@ -148,7 +159,7 @@ PDF 支持依赖可选择的 PDF 文本层。没有 OCR 文本的扫描件页面
 
 本插件不收集遥测数据，也不会扫描你的 vault。
 
-翻译 Markdown 或 PDF 选中文本时，只有被选中的文本会发送到插件设置中当前选择的翻译服务商。除非你信任该服务商，否则不要翻译敏感内容。
+翻译 Markdown 或 PDF 选中文本时，只有被选中的文本会发送到插件设置中当前选择的翻译服务商。使用词典服务商时，选中的单词会发送到 Dict.cn/海词，发音音频也会从 Dict.cn 加载。除非你信任该服务商，否则不要翻译敏感内容。
 
 服务商凭据通过 Obsidian 插件数据的 `saveData()` 存储在本地。密钥字段会显示为密码输入框，但 Obsidian 插件数据是本地明文存储，不是加密存储。本插件不会记录服务商凭据。
 

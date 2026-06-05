@@ -81,7 +81,8 @@ const TRANSLATION_PROVIDERS: Array<{
 		| 'settingsProviderGoogle'
 		| 'settingsProviderDeepL'
 		| 'settingsProviderBaidu'
-		| 'settingsProviderYoudao';
+		| 'settingsProviderYoudao'
+		| 'settingsProviderDictionary';
 }> = [
 	{ id: 'openai', labelKey: 'settingsProviderOpenAI' },
 	{ id: 'microsoft', labelKey: 'settingsProviderMicrosoft' },
@@ -89,6 +90,7 @@ const TRANSLATION_PROVIDERS: Array<{
 	{ id: 'deepl', labelKey: 'settingsProviderDeepL' },
 	{ id: 'baidu', labelKey: 'settingsProviderBaidu' },
 	{ id: 'youdao', labelKey: 'settingsProviderYoudao' },
+	{ id: 'dictionary', labelKey: 'settingsProviderDictionary' },
 ];
 
 export class SelectionTranslatorSettingTab extends PluginSettingTab {
@@ -188,6 +190,9 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 				break;
 			case 'youdao':
 				this.renderYoudaoProviderSettings(containerEl);
+				break;
+			case 'dictionary':
+				this.renderDictionaryProviderSettings(containerEl);
 				break;
 		}
 
@@ -412,6 +417,12 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
+	}
+
+	private renderDictionaryProviderSettings(containerEl: HTMLElement) {
+		new Setting(containerEl)
+			.setName(t('settingsDictionaryProviderName'))
+			.setDesc(t('settingsDictionaryProviderDesc'));
 	}
 
 	private renderTranslationSettings(containerEl: HTMLElement) {

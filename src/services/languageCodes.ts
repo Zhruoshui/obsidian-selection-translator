@@ -4,7 +4,8 @@ export type TranslationProviderId =
 	| 'google'
 	| 'deepl'
 	| 'baidu'
-	| 'youdao';
+	| 'youdao'
+	| 'dictionary';
 
 type ProviderLanguageCodes = Record<TranslationProviderId, string>;
 

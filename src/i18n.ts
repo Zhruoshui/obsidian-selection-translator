@@ -19,9 +19,13 @@ const en = {
 	settingsProviderDeepL: 'DeepL',
 	settingsProviderBaidu: 'Baidu Translate',
 	settingsProviderYoudao: 'Youdao Translate',
+	settingsProviderDictionary: 'Dictionary (English word)',
 	settingsProviderHeading: 'OpenAI-compatible chat API',
 	settingsProviderDesc:
 		'Selected text is sent to this provider when OpenAI-compatible translation is selected.',
+	settingsDictionaryProviderName: 'Dictionary lookup',
+	settingsDictionaryProviderDesc:
+		'Looks up one selected English word with Dict.cn and shows UK/US pronunciation buttons. No API key is required.',
 	settingsApiBaseUrlName: 'API base URL',
 	settingsApiBaseUrlDesc: 'Base URL for the provider.',
 	settingsApiKeyName: 'API key',
@@ -114,7 +118,14 @@ const en = {
 	popoverCloseTranslation: 'Close translation',
 	popoverResizeAriaLabel: 'Resize translation popover',
 	popoverResizeTitle: 'Resize',
+	popoverPronunciationUk: 'UK',
+	popoverPronunciationUs: 'US',
+	popoverPlayPronunciation: 'Play {label} pronunciation',
 	popoverCopied: 'Translation copied.',
+
+	dictionaryOnlyEnglishWord:
+		'Select one English word to look it up in the dictionary.',
+	dictionaryNoResult: 'The dictionary service did not return an entry.',
 
 	providerMissingTranslatedText:
 		'The provider response did not include translated text.',
@@ -153,9 +164,13 @@ const zhCN: TranslationDictionary = {
 	settingsProviderDeepL: 'DeepL',
 	settingsProviderBaidu: '百度翻译',
 	settingsProviderYoudao: '有道翻译',
+	settingsProviderDictionary: '词典（英文单词）',
 	settingsProviderHeading: 'OpenAI 兼容聊天 API',
 	settingsProviderDesc:
 		'选择 OpenAI 兼容翻译时，选中文本会发送到此服务商。',
+	settingsDictionaryProviderName: '词典查询',
+	settingsDictionaryProviderDesc:
+		'使用 Dict.cn/海词查询一个选中的英文单词，并显示英音/美音发音按钮。不需要 API 密钥。',
 	settingsApiBaseUrlName: 'API 基础 URL',
 	settingsApiBaseUrlDesc: '服务商的基础 URL。',
 	settingsApiKeyName: 'API 密钥',
@@ -244,7 +259,13 @@ const zhCN: TranslationDictionary = {
 	popoverCloseTranslation: '关闭翻译',
 	popoverResizeAriaLabel: '调整翻译悬浮窗大小',
 	popoverResizeTitle: '调整大小',
+	popoverPronunciationUk: '英音',
+	popoverPronunciationUs: '美音',
+	popoverPlayPronunciation: '播放{label}发音',
 	popoverCopied: '译文已复制。',
+
+	dictionaryOnlyEnglishWord: '请选择一个英文单词进行词典查询。',
+	dictionaryNoResult: '词典服务没有返回该单词的释义。',
 
 	providerMissingTranslatedText: '服务商响应中没有翻译文本。',
 	providerMissingApiBaseUrl: '请先配置 API 基础 URL。',
