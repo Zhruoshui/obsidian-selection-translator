@@ -11,6 +11,23 @@ export interface TranslationPopoverOptions {
 	showSelectedText: boolean;
 }
 
+const TEXT_AREA_SELECTOR =
+	'.selection-translator-popover__source-input, .selection-translator-popover__result-output';
+const AUTO_POPOVER_MAX_WIDTH = 760;
+const AUTO_POPOVER_VIEWPORT_MARGIN = 16;
+const COMPACT_POPOVER_WIDTH = 340;
+const MEDIUM_RESULT_POPOVER_WIDTH = 420;
+const LONG_RESULT_POPOVER_WIDTH = 520;
+const SPLIT_POPOVER_WIDTH = 640;
+const LONG_SPLIT_POPOVER_WIDTH = 720;
+const SPLIT_LAYOUT_MIN_WIDTH = 520;
+const MEDIUM_TEXT_LENGTH = 120;
+const LONG_TEXT_LENGTH = 280;
+const TEXT_AREA_MIN_HEIGHT = 64;
+const TEXT_AREA_MAX_HEIGHT = 320;
+const SINGLE_TEXT_AREA_RESERVED_HEIGHT = 128;
+const MULTI_TEXT_AREA_RESERVED_HEIGHT = 172;
+
 export class TranslationPopover {
 	private containerEl: HTMLDivElement | null = null;
 	private currentTask: TranslationTask | null = null;
@@ -26,6 +43,15 @@ export class TranslationPopover {
 		startX: number;
 		startY: number;
 	} | null = null;
+	private resizeEventWindow: Window | null = null;
+	private readonly handleWindowResize = () => {
+		if (!this.containerEl) {
+			return;
+		}
+
+		this.refreshAdaptiveLayout();
+		this.position();
+	};
 
 	constructor(
 		private readonly onRetry: (sourceText: string) => void,
@@ -35,7 +61,7 @@ export class TranslationPopover {
 	show(task: TranslationTask, options: TranslationPopoverOptions) {
 		this.currentTask = task;
 		this.ensureContainer();
-		this.render(task, options);
+		this.render(task, options, false);
 		this.position();
 	}
 
@@ -50,12 +76,17 @@ export class TranslationPopover {
 		if (!this.containerEl || this.currentTask?.id !== task.id) {
 			return;
 		}
-		this.render(task, options);
+		this.render(task, options, true);
 		this.position();
 	}
 
 	close() {
 		const wasOpen = this.containerEl !== null;
+		this.resizeEventWindow?.removeEventListener(
+			'resize',
+			this.handleWindowResize,
+		);
+		this.resizeEventWindow = null;
 		this.containerEl?.remove();
 		this.containerEl = null;
 		this.currentTask = null;
@@ -92,14 +123,22 @@ export class TranslationPopover {
 		});
 		activeDocument.body.appendChild(container);
 		this.containerEl = container;
+		this.resizeEventWindow = activeWindow;
+		this.resizeEventWindow.addEventListener('resize', this.handleWindowResize);
 	}
 
-	private render(task: TranslationTask, options: TranslationPopoverOptions) {
+	private render(
+		task: TranslationTask,
+		options: TranslationPopoverOptions,
+		preserveSourceInput: boolean,
+	) {
 		if (!this.containerEl) {
 			return;
 		}
 
-		const sourceText = getSourceInputValue(this.containerEl) ?? task.raw;
+		const sourceText = preserveSourceInput
+			? getSourceInputValue(this.containerEl) ?? task.raw
+			: task.raw;
 
 		this.containerEl.replaceChildren();
 		this.containerEl.appendChild(this.createHeader(task));
@@ -118,6 +157,7 @@ export class TranslationPopover {
 		);
 		this.containerEl.appendChild(contentEl);
 		this.containerEl.appendChild(this.createResizeHandle());
+		this.refreshAdaptiveLayout();
 	}
 
 	private renderIdle() {
@@ -134,6 +174,7 @@ export class TranslationPopover {
 		);
 		this.containerEl.appendChild(contentEl);
 		this.containerEl.appendChild(this.createResizeHandle());
+		this.refreshAdaptiveLayout();
 	}
 
 	private createHeader(task: TranslationTask | null) {
@@ -187,6 +228,44 @@ export class TranslationPopover {
 			this.handleResizePointerDown(event);
 		});
 		return handleEl;
+	}
+
+	private refreshAdaptiveLayout() {
+		if (!this.containerEl) {
+			return;
+		}
+
+		const textAreas = getPopoverTextAreas(this.containerEl);
+		if (!this.isUserSized) {
+			this.containerEl.style.removeProperty('height');
+			this.containerEl.setCssProps({
+				width: `${getAdaptivePopoverWidth(textAreas)}px`,
+			});
+		}
+
+		this.fitTextAreas(textAreas);
+	}
+
+	private fitTextAreas(textAreas: HTMLTextAreaElement[]) {
+		if (textAreas.length === 0) {
+			return;
+		}
+
+		const isSplitLayout =
+			this.containerEl !== null &&
+			textAreas.length > 1 &&
+			this.containerEl.offsetWidth >= SPLIT_LAYOUT_MIN_WIDTH;
+		const maxHeight = getMaxTextAreaHeight(textAreas.length, isSplitLayout);
+		for (const textArea of textAreas) {
+			textArea.setCssProps({ height: 'auto' });
+			textArea.setCssProps({
+				height: `${clamp(
+					textArea.scrollHeight,
+					TEXT_AREA_MIN_HEIGHT,
+					maxHeight,
+				)}px`,
+			});
+		}
 	}
 
 	private position() {
@@ -341,6 +420,7 @@ export class TranslationPopover {
 			width: `${width}px`,
 			height: `${height}px`,
 		});
+		this.fitTextAreas(getPopoverTextAreas(this.containerEl));
 	}
 
 	private handlePointerUp(event: PointerEvent) {
@@ -367,6 +447,7 @@ export class TranslationPopover {
 			return;
 		}
 
+		this.fitTextAreas(getPopoverTextAreas(this.containerEl));
 		const rect = this.containerEl.getBoundingClientRect();
 		if (this.isUserSized) {
 			this.containerEl.setCssProps({
@@ -381,16 +462,18 @@ export class TranslationPopover {
 					activeWindow.innerHeight - 16,
 				)}px`,
 			});
+			this.fitTextAreas(getPopoverTextAreas(this.containerEl));
 		}
 
+		const updatedRect = this.containerEl.getBoundingClientRect();
 		this.containerEl.setCssProps({
 			left: `${clamp(
-				rect.left,
+				updatedRect.left,
 				8,
 				activeWindow.innerWidth - this.containerEl.offsetWidth - 8,
 			)}px`,
 			top: `${clamp(
-				rect.top,
+				updatedRect.top,
 				8,
 				activeWindow.innerHeight - this.containerEl.offsetHeight - 8,
 			)}px`,
@@ -577,6 +660,63 @@ function clamp(value: number, min: number, max: number) {
 		return min;
 	}
 	return Math.min(Math.max(value, min), max);
+}
+
+function getPopoverTextAreas(containerEl: HTMLElement) {
+	return Array.from(
+		containerEl.querySelectorAll<HTMLTextAreaElement>(TEXT_AREA_SELECTOR),
+	);
+}
+
+function getAdaptivePopoverWidth(textAreas: HTMLTextAreaElement[]) {
+	const hasSourceInput = textAreas.some((textArea) =>
+		textArea.classList.contains('selection-translator-popover__source-input'),
+	);
+	const longestTextLength = textAreas.reduce(
+		(length, textArea) => Math.max(length, textArea.value.length),
+		0,
+	);
+	const preferredWidth = getPreferredPopoverWidth(
+		hasSourceInput,
+		longestTextLength,
+	);
+	const maxWidth = Math.min(
+		AUTO_POPOVER_MAX_WIDTH,
+		activeWindow.innerWidth - AUTO_POPOVER_VIEWPORT_MARGIN,
+	);
+
+	return clamp(preferredWidth, getMinPopoverWidth(), maxWidth);
+}
+
+function getPreferredPopoverWidth(hasSourceInput: boolean, textLength: number) {
+	if (hasSourceInput) {
+		return textLength > LONG_TEXT_LENGTH
+			? LONG_SPLIT_POPOVER_WIDTH
+			: SPLIT_POPOVER_WIDTH;
+	}
+
+	if (textLength > LONG_TEXT_LENGTH) {
+		return LONG_RESULT_POPOVER_WIDTH;
+	}
+
+	if (textLength > MEDIUM_TEXT_LENGTH) {
+		return MEDIUM_RESULT_POPOVER_WIDTH;
+	}
+
+	return COMPACT_POPOVER_WIDTH;
+}
+
+function getMaxTextAreaHeight(textAreaCount: number, isSplitLayout: boolean) {
+	const reservedHeight =
+		textAreaCount > 1 && !isSplitLayout
+			? MULTI_TEXT_AREA_RESERVED_HEIGHT
+			: SINGLE_TEXT_AREA_RESERVED_HEIGHT;
+	const heightDivisor = isSplitLayout ? 1 : textAreaCount;
+	const availableHeight = Math.floor(
+		(activeWindow.innerHeight - reservedHeight) / heightDivisor,
+	);
+
+	return clamp(availableHeight, TEXT_AREA_MIN_HEIGHT, TEXT_AREA_MAX_HEIGHT);
 }
 
 function getMinPopoverWidth() {

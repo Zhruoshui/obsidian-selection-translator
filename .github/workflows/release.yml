@@ -31,6 +31,26 @@ jobs:
               run: |
                   [ -f styles.css ] && echo "exists=true" >> "$GITHUB_OUTPUT" || echo "exists=false" >> "$GITHUB_OUTPUT"
 
+            - name: Extract release notes
+              run: |
+                  tag="${GITHUB_REF#refs/tags/}"
+                  awk -v tag="$tag" '
+                      $0 == "## " tag || $0 ~ "^## " tag " - " {
+                          in_section = 1
+                          next
+                      }
+                      in_section && /^## / {
+                          exit
+                      }
+                      in_section {
+                          print
+                      }
+                  ' CHANGELOG.md > release-notes.md
+
+                  if [ ! -s release-notes.md ]; then
+                      echo "$tag" > release-notes.md
+                  fi
+
             - name: Attest build provenance
               uses: actions/attest@v4
               with:
@@ -46,4 +66,5 @@ jobs:
 
                   gh release create "$tag" \
                     --title="$tag" \
+                    --notes-file release-notes.md \
                     main.js manifest.json ${{ steps.styles.outputs.exists == 'true' && 'styles.css' || '' }}

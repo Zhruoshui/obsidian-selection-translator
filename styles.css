@@ -6,7 +6,7 @@
 	container-type: inline-size;
 	width: min(340px, calc(100vw - 16px));
 	max-width: calc(100vw - 16px);
-	max-height: min(420px, calc(100vh - 16px));
+	max-height: calc(100vh - 16px);
 	overflow: hidden;
 	padding: 0;
 	border: 1px solid var(--background-modifier-border-hover);
@@ -163,6 +163,7 @@
 	font-family: inherit;
 	font-size: var(--font-ui-small);
 	line-height: 1.5;
+	overflow: auto;
 	resize: vertical;
 	user-select: text;
 }

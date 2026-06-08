@@ -24,6 +24,9 @@ import {
 } from './translation/task';
 import { TranslationPopover } from './ui/translationPopover';
 
+const SELECTION_TRANSLATION_DEBOUNCE_MS = 80;
+const SELECTION_TRANSLATION_FLUSH_DELAY_MS = 0;
+
 export default class SelectionTranslatorPlugin extends Plugin {
 	settings!: SelectionTranslatorSettings;
 	private translator!: TranslationService;
@@ -49,6 +52,12 @@ export default class SelectionTranslatorPlugin extends Plugin {
 		registerSelectionTranslationCommands(this);
 		this.registerDomEvent(activeDocument, 'selectionchange', () => {
 			this.scheduleOpenPopoverSelectionTranslation();
+		});
+		this.registerDomEvent(activeDocument, 'pointerup', () => {
+			this.flushOpenPopoverSelectionTranslation();
+		});
+		this.registerDomEvent(activeDocument, 'keyup', () => {
+			this.flushOpenPopoverSelectionTranslation();
 		});
 		this.addSettingTab(new SelectionTranslatorSettingTab(this.app, this));
 	}
@@ -197,7 +206,9 @@ export default class SelectionTranslatorPlugin extends Plugin {
 		};
 	}
 
-	private scheduleOpenPopoverSelectionTranslation() {
+	private scheduleOpenPopoverSelectionTranslation(
+		delayMs = SELECTION_TRANSLATION_DEBOUNCE_MS,
+	) {
 		if (!this.popover.isOpen()) {
 			return;
 		}
@@ -209,7 +220,22 @@ export default class SelectionTranslatorPlugin extends Plugin {
 		this.selectionChangeTimeout = window.setTimeout(() => {
 			this.selectionChangeTimeout = null;
 			void this.translateCurrentSelectionIfChanged();
-		}, 300);
+		}, delayMs);
+	}
+
+	private flushOpenPopoverSelectionTranslation() {
+		if (!this.popover.isOpen()) {
+			return;
+		}
+
+		if (this.selectionChangeTimeout !== null) {
+			window.clearTimeout(this.selectionChangeTimeout);
+			this.selectionChangeTimeout = null;
+		}
+
+		window.setTimeout(() => {
+			void this.translateCurrentSelectionIfChanged();
+		}, SELECTION_TRANSLATION_FLUSH_DELAY_MS);
 	}
 
 	private async translateCurrentSelectionIfChanged() {
