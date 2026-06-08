@@ -274,3 +274,13 @@ npm run lint
 ```
 
 ---
+
+## License
+
+This project is licensed under the MIT License. You are free to use, modify, and distribute it, provided you retain the original copyright notice and license statement.
+
+---
+
+## Acknowledgments
+
+Thanks to the LinuxDo community (https://linux.do) for their support.
