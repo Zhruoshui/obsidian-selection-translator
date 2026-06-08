@@ -8,10 +8,12 @@
 [使用指南](#使用指南) |
 [隐私](#隐私) |
 [安装](#安装) |
-[常见问题](#常见问题) |
-[开发](#开发)
+[开发](#开发) |
+[常见问题](#常见问题)
 
 Selection Translator 是一个 Obsidian 插件，可以使用可自行选择的 AI 或传统翻译服务商翻译 Markdown 编辑器或 PDF 中选中的文本，并自动处理英文单词词典查询。
+
+![f_start](./img/f_start.png)
 
 ---
 
@@ -24,10 +26,14 @@ Selection Translator 是一个 Obsidian 插件，可以使用可自行选择的 
 - 可以在悬浮窗中编辑源文本后重新翻译。
 - 只选择一个英文单词时会自动使用配置的词典服务商查询，并在可用时播放英音/美音发音。
 
+![f_dictionary](./img/f_dictionary.png)
+
 ### 语言设置
 
 - 在插件设置中配置默认源语言和目标语言。
 - 源语言使用 `Auto` 时，由支持的服务商自动识别输入语言。
+
+![setting](./img/settings.png)
 
 ### 悬浮窗工作流
 
@@ -35,6 +41,10 @@ Selection Translator 是一个 Obsidian 插件，可以使用可自行选择的 
 - 顶部使用紧凑图标按钮复制完整译文、重新翻译或关闭悬浮窗。
 - 译文结果支持自由选择，可以只复制其中任意片段。
 - 顶部布局兼顾桌面端和较窄的移动端屏幕。
+
+<p align="center">
+  <img src="./img/f_dictionary_m.jpg" alt="词典查询移动端" width="30%">
+</p>
 
 ### 服务商支持
 
@@ -44,6 +54,8 @@ Selection Translator 是一个 Obsidian 插件，可以使用可自行选择的 
 - 只选择一个英文单词时会自动使用配置的词典服务商。有道词典、必应词典和剑桥词典均可选择，且不需要 API 密钥。
 - 翻译前可以测试服务商配置是否可用。
 - 插件界面跟随 Obsidian 应用语言，目前支持 English 和简体中文。
+
+![provider](./img/provider.png)
 
 ---
 
@@ -171,6 +183,8 @@ PDF 支持依赖可选择的 PDF 文本层。没有 OCR 文本的扫描件页面
 https://github.com/Zhruoshui/obsidian-selection-translator
 ```
 
+![brat](./img/brat.png)
+
 5. 在 **Settings -> Community plugins** 中启用 **Selection Translator**。
 
 BRAT 会从 GitHub release 安装插件文件。每个 release 都需要包含 `main.js`、`manifest.json` 和 `styles.css`。
@@ -187,28 +201,33 @@ BRAT 会从 GitHub release 安装插件文件。每个 release 都需要包含 `
 
 ---
 
-## 常见问题
+## 开发
 
-### 配置测试失败
+### 使用符号链接开发
 
-- 确认 API 基础 URL 正确并且可以访问。
-- 确认凭据对当前选择的服务商有效。
-- 对于 OpenAI 兼容服务商，确认模型名称存在于该服务商。
+开发时，可以将仓库软链接到 vault 的 plugins 目录下，这样执行 `npm run build` 后直接在 Obsidian 中重载插件即可，无需手动复制文件。
 
-### 翻译悬浮窗没有出现
+**Linux / macOS**：
 
-- 确认当前 Markdown 编辑器或可选择 PDF 文本层中有选中文本。
-- 尝试从命令面板运行 **Translate selection**。
-- 对于 PDF，确认它有可选择文本，而不是只有扫描图片。
+```bash
+ln -s /path/to/obsidian-selection-translator "<Vault>/.obsidian/plugins/selection-translator"
+```
 
-### 源语言没有明显影响输出
+**Windows**（需要管理员权限或开启开发者模式）：
 
-- 使用默认提示词，或在自定义提示词中包含 `{sourceLanguage}`。
-- 如果自定义提示词缺少语言占位符，插件也会在提示词前补充缺失的语言方向上下文。
+```cmd
+mklink /D "<Vault>\.obsidian\plugins\selection-translator" "C:\path\to\obsidian-selection-translator"
+```
+
+Windows 上也可以使用目录联接（无需管理员权限）：
+
+```cmd
+mklink /J "<Vault>\.obsidian\plugins\selection-translator" "C:\path\to\obsidian-selection-translator"
+```
+
+链接完成后，`npm run build` 会将 `main.js` 直接编译到插件目录。在 Obsidian 中重载或禁用再启用插件即可看到更改。
 
 ---
-
-## 开发
 
 安装依赖：
 
@@ -230,22 +249,21 @@ npm run lint
 
 ---
 
-## 发布
+## 常见问题
 
-仓库配置了 GitHub Actions：推送版本 tag 时会创建 GitHub release。release workflow 会构建插件并上传 BRAT 需要的文件。
+### 配置测试失败
 
-如果要从已经设置好版本号的提交发布第一个 `1.0.0` 版本：
+- 确认 API 基础 URL 正确并且可以访问。
+- 确认凭据对当前选择的服务商有效。
+- 对于 OpenAI 兼容服务商，确认模型名称存在于该服务商。
 
-```bash
-git tag -a 1.0.0 -m "1.0.0"
-git push origin main --follow-tags
-```
+### 翻译悬浮窗没有出现
 
-后续发布时，更新 npm package 版本：
+- 确认当前 Markdown 编辑器或可选择 PDF 文本层中有选中文本。
+- 尝试从命令面板运行 **Translate selection**。
+- 对于 PDF，确认它有可选择文本，而不是只有扫描图片。
 
-```bash
-npm version patch
-git push origin main --follow-tags
-```
+### 源语言没有明显影响输出
 
-使用 `npm version` 创建的准确 tag。tag 不带前缀 `v`。
+- 使用默认提示词，或在自定义提示词中包含 `{sourceLanguage}`。
+- 如果自定义提示词缺少语言占位符，插件也会在提示词前补充缺失的语言方向上下文。

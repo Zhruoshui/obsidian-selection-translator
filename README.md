@@ -13,6 +13,8 @@
 
 Selection Translator is an Obsidian plugin for translating selected Markdown editor and PDF text with selectable AI and traditional translation providers plus automatic dictionary lookup.
 
+![f_start](./img/f_start.png)
+
 ---
 
 ## Features
@@ -24,10 +26,14 @@ Selection Translator is an Obsidian plugin for translating selected Markdown edi
 - Edit the selected source text in the popover and translate again.
 - Automatically look up one selected English word with the configured dictionary provider and play UK/US pronunciations when available.
 
+![f_dictionary](./img/f_dictionary.png)
+
 ### Language Defaults
 
 - Set default source and target languages in plugin settings.
 - Use `Auto` as the source language when you want a supported provider to detect the input language.
+
+![setting](./img/settings.png)
 
 ### Popover Workflow
 
@@ -35,6 +41,10 @@ Selection Translator is an Obsidian plugin for translating selected Markdown edi
 - Use compact header buttons to copy the full result, retry translation, or close the popover.
 - Select any part of the translation result and copy it with native keyboard or context-menu copy.
 - Header layout is compact for desktop and narrow mobile screens.
+
+<p align="center">
+  <img src="./img/f_dictionary_m.jpg" alt="dictionary lookup on mobile" width="30%">
+</p>
 
 ### Provider Support
 
@@ -44,6 +54,8 @@ Selection Translator is an Obsidian plugin for translating selected Markdown edi
 - One selected English word automatically uses the configured dictionary provider. Youdao Dictionary, Bing Dictionary, and Cambridge Dictionary are selectable and do not require an API key.
 - Test the provider configuration before translating.
 - Plugin UI follows Obsidian's app language for English and Simplified Chinese.
+
+![provider](./img/provider.png)
 
 ---
 
@@ -176,6 +188,8 @@ This plugin is distributed as a beta plugin through GitHub releases. Install it 
 https://github.com/Zhruoshui/obsidian-selection-translator
 ```
 
+![brat](./img/brat.png)
+
 5. Enable **Selection Translator** in **Settings -> Community plugins**.
 
 BRAT installs the release assets from GitHub. Each release must include `main.js`, `manifest.json`, and `styles.css`.
@@ -215,6 +229,32 @@ Reload Obsidian and enable the plugin in **Settings -> Community plugins**.
 
 ## Development
 
+### Symlink for Development
+
+During development, symlink the repository into the vault's plugins directory so you can run `npm run build` and reload Obsidian without copying files manually.
+
+**Linux / macOS**:
+
+```bash
+ln -s /path/to/obsidian-selection-translator "<Vault>/.obsidian/plugins/selection-translator"
+```
+
+**Windows** (requires administrator or Developer Mode):
+
+```cmd
+mklink /D "<Vault>\.obsidian\plugins\selection-translator" "C:\path\to\obsidian-selection-translator"
+```
+
+You can also create a directory junction on Windows (no admin required):
+
+```cmd
+mklink /J "<Vault>\.obsidian\plugins\selection-translator" "C:\path\to\obsidian-selection-translator"
+```
+
+After linking, `npm run build` compiles `main.js` into the plugin folder directly. Reload Obsidian or disable and re-enable the plugin to pick up changes.
+
+---
+
 Install dependencies:
 
 ```bash
@@ -234,23 +274,3 @@ npm run lint
 ```
 
 ---
-
-## Release
-
-The repository is configured to create a GitHub release when a version tag is pushed. The release workflow builds the plugin and uploads the files BRAT needs.
-
-For the first `1.0.0` release from an already versioned commit:
-
-```bash
-git tag -a 1.0.0 -m "1.0.0"
-git push origin main --follow-tags
-```
-
-For later releases, update the npm package version:
-
-```bash
-npm version patch
-git push origin main --follow-tags
-```
-
-Use the exact tag created by `npm version`. Tags do not use a leading `v`.
