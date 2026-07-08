@@ -7,6 +7,8 @@ import {
 import { t } from './i18n';
 import { TranslationService } from './services/translationService';
 import { resolveTextTranslationProvider } from './services/languageCodes';
+import { TranslationCache } from './services/translationCache';
+import { RequestThrottle } from './services/requestThrottle';
 import {
 	DEFAULT_SETTINGS,
 	LEGACY_DEFAULT_PROMPT,
@@ -25,15 +27,18 @@ import {
 import { TranslationPopover } from './ui/translationPopover';
 
 const SELECTION_TRANSLATION_DEBOUNCE_MS = 80;
-const SELECTION_TRANSLATION_FLUSH_DELAY_MS = 0;
+const SELECTION_TRANSLATION_STABLE_DELAY_MS = 250;
 
 export default class SelectionTranslatorPlugin extends Plugin {
 	settings!: SelectionTranslatorSettings;
 	private translator!: TranslationService;
 	private popover!: TranslationPopover;
+	private translationCache = new TranslationCache();
+	private requestThrottle = new RequestThrottle();
 	private currentAbortController: AbortController | null = null;
 	private lastTranslatedSelection = '';
 	private selectionChangeTimeout: number | null = null;
+	private flushTimeout: number | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -65,6 +70,7 @@ export default class SelectionTranslatorPlugin extends Plugin {
 	onunload() {
 		this.stopCurrentTranslation();
 		this.popover.close();
+		this.translationCache.invalidate();
 	}
 
 	async loadSettings() {
@@ -109,6 +115,7 @@ export default class SelectionTranslatorPlugin extends Plugin {
 	}
 
 	async saveSettings() {
+		this.translationCache.invalidate();
 		await this.saveData(this.settings);
 	}
 
@@ -163,7 +170,39 @@ export default class SelectionTranslatorPlugin extends Plugin {
 		this.stopCurrentTranslation();
 		const task = createTranslationTask(text);
 		this.popover.show(task, this.getPopoverOptions());
+
+		if (this.tryServeFromCache(task)) {
+			return;
+		}
+
 		await this.runTranslationTask(task);
+	}
+
+	private tryServeFromCache(task: TranslationTask): boolean {
+		const cacheKey = this.buildCacheKey(task.raw);
+		if (!cacheKey) {
+			return false;
+		}
+		const entry = this.translationCache.get(cacheKey);
+		if (!entry) {
+			return false;
+		}
+
+		updateTaskProcessing(task);
+		appendTaskResult(task, entry.result);
+		updateTaskSuccess(task, entry.result);
+		this.popover.update(task, this.getPopoverOptions());
+		return true;
+	}
+
+	private buildCacheKey(text: string) {
+		const provider = resolveTextTranslationProvider(this.settings.provider);
+		return {
+			text,
+			provider,
+			sourceLanguage: this.settings.sourceLanguage,
+			targetLanguage: this.settings.targetLanguage,
+		};
 	}
 
 	private async runTranslationTask(task: TranslationTask) {
@@ -175,6 +214,14 @@ export default class SelectionTranslatorPlugin extends Plugin {
 		this.popover.update(task, this.getPopoverOptions());
 
 		try {
+			await this.requestThrottle.wait(
+				resolveTextTranslationProvider(this.settings.provider),
+				abortController.signal,
+			);
+			if (abortController.signal.aborted) {
+				return;
+			}
+
 			const result = await this.translator.translate(task.raw, this.settings, {
 				signal: abortController.signal,
 				onChunk: (chunk) => {
@@ -186,6 +233,12 @@ export default class SelectionTranslatorPlugin extends Plugin {
 				return;
 			}
 			updateTaskSuccess(task, result);
+			if (typeof result === 'string') {
+				const cacheKey = this.buildCacheKey(task.raw);
+				if (cacheKey) {
+					this.translationCache.set(cacheKey, result);
+				}
+			}
 		} catch (error) {
 			if (abortController.signal.aborted) {
 				return;
@@ -233,9 +286,14 @@ export default class SelectionTranslatorPlugin extends Plugin {
 			this.selectionChangeTimeout = null;
 		}
 
-		window.setTimeout(() => {
+		if (this.flushTimeout !== null) {
+			window.clearTimeout(this.flushTimeout);
+		}
+
+		this.flushTimeout = window.setTimeout(() => {
+			this.flushTimeout = null;
 			void this.translateCurrentSelectionIfChanged();
-		}, SELECTION_TRANSLATION_FLUSH_DELAY_MS);
+		}, SELECTION_TRANSLATION_STABLE_DELAY_MS);
 	}
 
 	private async translateCurrentSelectionIfChanged() {
@@ -255,6 +313,11 @@ export default class SelectionTranslatorPlugin extends Plugin {
 		if (this.selectionChangeTimeout !== null) {
 			window.clearTimeout(this.selectionChangeTimeout);
 			this.selectionChangeTimeout = null;
+		}
+
+		if (this.flushTimeout !== null) {
+			window.clearTimeout(this.flushTimeout);
+			this.flushTimeout = null;
 		}
 
 		this.currentAbortController?.abort();

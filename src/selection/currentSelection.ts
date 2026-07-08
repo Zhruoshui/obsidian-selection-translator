@@ -1,4 +1,5 @@
 import { App, Editor, FileView } from 'obsidian';
+import { normalizeSelectionText as collapseWhitespace } from './textNormalize';
 
 export type SelectionSource = 'editor' | 'pdf';
 
@@ -84,5 +85,5 @@ function isNodeInsideElement(node: Node | null, element: HTMLElement) {
 }
 
 function normalizeSelectionText(text: string) {
-	return text.trim();
+	return collapseWhitespace(text);
 }

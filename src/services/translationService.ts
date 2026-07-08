@@ -1,5 +1,6 @@
 import { requestUrl } from 'obsidian';
 import { t } from '../i18n';
+import { collapseWhitespaceOnResult } from '../selection/textNormalize';
 import {
 	DEFAULT_SETTINGS,
 	type SelectionTranslatorSettings,
@@ -21,6 +22,11 @@ interface TranslationRequestOptions {
 	signal?: AbortSignal;
 	onChunk?: (chunk: string) => void;
 }
+
+const RETRY_MAX_ATTEMPTS = 2;
+const RETRY_BASE_DELAY_MS = 500;
+const RETRY_MAX_DELAY_MS = 3000;
+const RETRY_JITTER_RATIO = 0.2;
 
 export class TranslationService {
 	private readonly openAI = new OpenAICompatibleChatService();
@@ -57,21 +63,27 @@ export class TranslationService {
 		provider: TextTranslationProviderId,
 		settings: SelectionTranslatorSettings,
 		options: TranslationRequestOptions = {},
-	) {
-		switch (provider) {
-			case 'openai':
-				return this.openAI.translate(text, settings, options);
-			case 'microsoft':
-				return translateWithMicrosoft(text, settings);
-			case 'google':
-				return translateWithGoogle(text, settings);
-			case 'deepl':
-				return translateWithDeepL(text, settings);
-			case 'baidu':
-				return translateWithBaidu(text, settings);
-			case 'youdao':
-				return translateWithYoudao(text, settings);
-		}
+	): Promise<string> {
+		const invoke = (): Promise<string> => {
+			switch (provider) {
+				case 'openai':
+					return this.openAI.translate(text, settings, options);
+				case 'microsoft':
+					return translateWithMicrosoft(text, settings);
+				case 'google':
+					return translateWithGoogle(text, settings);
+				case 'deepl':
+					return translateWithDeepL(text, settings);
+				case 'baidu':
+					return translateWithBaidu(text, settings);
+				case 'youdao':
+					return translateWithYoudao(text, settings);
+			}
+		};
+
+		return withRetry(invoke, options.signal).then((result) =>
+			collapseWhitespaceOnResult(result).trim(),
+		);
 	}
 }
 
@@ -405,6 +417,103 @@ function ensureSuccessfulResponse(status: number, json: unknown, text: string) {
 		return;
 	}
 	throw new Error(getProviderError(json, text));
+}
+
+async function withRetry(
+	invoke: () => Promise<string>,
+	signal?: AbortSignal,
+): Promise<string> {
+	let attempt = 0;
+	let lastError: unknown;
+
+	while (attempt <= RETRY_MAX_ATTEMPTS) {
+		if (signal?.aborted) {
+			throw createAbortError();
+		}
+		try {
+			return await invoke();
+		} catch (error) {
+			lastError = error;
+			if (signal?.aborted) {
+				throw createAbortError();
+			}
+			if (!isRetryableError(error) || attempt === RETRY_MAX_ATTEMPTS) {
+				throw error;
+			}
+			const delay = computeBackoffDelay(attempt);
+			await sleep(delay, signal);
+			attempt += 1;
+		}
+	}
+
+	throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
+function isRetryableError(error: unknown): boolean {
+	if (!(error instanceof Error)) {
+		return false;
+	}
+	if (error.name === 'AbortError') {
+		return false;
+	}
+	const message = error.message;
+	if (!message) {
+		return false;
+	}
+	if (RETRY_KEYWORDS.some((keyword) => message.toLowerCase().includes(keyword))) {
+		return true;
+	}
+	const match = message.match(/\b(?:code[:\s]+|status[:\s]+|http[:\s]+)?(\d{3})\b/i);
+	if (!match) {
+		return false;
+	}
+	const status = Number(match[1]);
+	return status === 429 || (status >= 500 && status < 600);
+}
+
+const RETRY_KEYWORDS = [
+	'invalid access limit',
+	'rate limit',
+	'too many requests',
+	'quota exceeded',
+	'request timeout',
+	'temporarily unavailable',
+	'service unavailable',
+	'invalid_request_error',
+	'rate_limit_error',
+];
+
+function computeBackoffDelay(attempt: number): number {
+	const exponential = RETRY_BASE_DELAY_MS * 2 ** attempt;
+	const jitter = exponential * RETRY_JITTER_RATIO * (Math.random() * 2 - 1);
+	return Math.min(RETRY_MAX_DELAY_MS, Math.max(0, exponential + jitter));
+}
+
+function sleep(delay: number, signal?: AbortSignal): Promise<void> {
+	return new Promise((resolve, reject) => {
+		const timer = window.setTimeout(() => {
+			signal?.removeEventListener('abort', onAbort);
+			resolve();
+		}, delay);
+		const onAbort = () => {
+			window.clearTimeout(timer);
+			reject(createAbortError());
+		};
+		if (signal) {
+			if (signal.aborted) {
+				window.clearTimeout(timer);
+				reject(createAbortError());
+				return;
+			}
+			signal.addEventListener('abort', onAbort, { once: true });
+		}
+	});
+}
+
+function createAbortError(): Error {
+	const error = new Error('Aborted');
+	error.name = 'AbortError';
+	return error;
 }
 
 function getMicrosoftTranslatedText(json: unknown) {
