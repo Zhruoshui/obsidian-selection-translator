@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.2.0 - 2026-07-08
+
+### English
+
+#### Added
+
+- Normalized the selected text before sending it to the translator: in-paragraph
+  line breaks and runs of whitespace are folded into a single space, paragraph
+  breaks (blank lines) are preserved, and Markdown code fences are left intact.
+- Wrapped the translation pipeline in a per-provider throttle (1500 ms floor)
+  and a short-lived retry loop (up to 2 retries, exponential backoff with
+  jitter, AbortError is never retried) so quick re-selections no longer trip
+  upstream rate limits such as "Invalid Access Limit".
+- Added a 10-minute translation cache keyed by `(text, provider, source,
+  target)` with a 256-entry LRU ceiling. Cache hits skip the network, the
+  throttle, and the retry path entirely; settings changes and plugin unload
+  clear the cache.
+- Replaced the 0 ms `pointerup`/`keyup` flush with a 250 ms stable debounce
+  so a burst of selection changes only fires one translation request.
+
+### 中文
+
+#### 新增
+
+- 翻译前对选中文本做规范化：段内换行与连续空白折叠为单个空格，段落分隔（空行）保留，Markdown 代码块围栏内的换行不被改动。
+- 给翻译流水线加上按服务商 1500 ms 节流与最多 2 次的指数退避重试（带抖动，AbortError 不重试），避免短时间多次选区触发上游 "Invalid Access Limit" 限流。
+- 新增 10 分钟翻译结果缓存，键为 `(文本, 服务商, 源语言, 目标语言)`，上限 256 条 LRU 淘汰。命中时跳过网络请求、节流与重试；设置变更和插件卸载会清空缓存。
+- 将 `pointerup`/`keyup` 的 0 ms 立即发送改为 250 ms 稳定防抖，连贯选区操作只产生一次翻译请求。
+
 ## 1.1.1 - 2026-06-08
 
 ### English
