@@ -1,14 +1,19 @@
 import { Notice, setIcon } from 'obsidian';
 import { t } from '../i18n';
+import type { QaTurn } from '../services/qaAgent';
 import type {
 	PronunciationAudio,
 	TranslationTask,
 } from '../translation/task';
 
 type CloseHandler = () => void;
+type AskHandler = (question: string) => void;
+type ClearQaHandler = () => void;
 
 export interface TranslationPopoverOptions {
 	showSelectedText: boolean;
+	qaEnabled: boolean;
+	qaConfigReady: boolean;
 }
 
 const TEXT_AREA_SELECTOR =
@@ -31,8 +36,17 @@ const MULTI_TEXT_AREA_RESERVED_HEIGHT = 172;
 export class TranslationPopover {
 	private containerEl: HTMLDivElement | null = null;
 	private currentTask: TranslationTask | null = null;
+	private currentOptions: TranslationPopoverOptions | null = null;
 	private isUserPositioned = false;
 	private isUserSized = false;
+	private qaExpanded = false;
+	private qaHistory: QaTurn[] = [];
+	private qaStreaming: {
+		question: string;
+		answer: string;
+		status: 'processing' | 'fail';
+	} | null = null;
+	private qaInputValue = '';
 	private dragState: {
 		offsetX: number;
 		offsetY: number;
@@ -56,6 +70,8 @@ export class TranslationPopover {
 	constructor(
 		private readonly onRetry: (sourceText: string) => void,
 		private readonly onClose: CloseHandler,
+		private readonly onAsk: AskHandler,
+		private readonly onClearQa: ClearQaHandler,
 	) {}
 
 	show(task: TranslationTask, options: TranslationPopoverOptions) {
@@ -90,10 +106,15 @@ export class TranslationPopover {
 		this.containerEl?.remove();
 		this.containerEl = null;
 		this.currentTask = null;
+		this.currentOptions = null;
 		this.dragState = null;
 		this.resizeState = null;
 		this.isUserPositioned = false;
 		this.isUserSized = false;
+		this.qaExpanded = false;
+		this.qaHistory = [];
+		this.qaStreaming = null;
+		this.qaInputValue = '';
 		if (wasOpen) {
 			this.onClose();
 		}
@@ -140,6 +161,16 @@ export class TranslationPopover {
 			? getSourceInputValue(this.containerEl) ?? task.raw
 			: task.raw;
 
+		if (preserveSourceInput) {
+			this.qaInputValue =
+				getQaInputValue(this.containerEl) ?? this.qaInputValue;
+		}
+		const qaInputHadFocus =
+			preserveSourceInput && this.qaExpanded
+				? isQaInputFocused(this.containerEl)
+				: false;
+
+		this.currentOptions = options;
 		this.containerEl.replaceChildren();
 		this.containerEl.appendChild(this.createHeader(task));
 
@@ -155,9 +186,16 @@ export class TranslationPopover {
 		contentEl.appendChild(
 			createResultSection(getResultLabel(task), resultText, task.audio),
 		);
+		if (options.qaEnabled) {
+			contentEl.appendChild(this.createQaSection());
+		}
 		this.containerEl.appendChild(contentEl);
 		this.containerEl.appendChild(this.createResizeHandle());
 		this.refreshAdaptiveLayout();
+
+		if (qaInputHadFocus) {
+			focusQaInput(this.containerEl);
+		}
 	}
 
 	private renderIdle() {
@@ -479,6 +517,262 @@ export class TranslationPopover {
 			)}px`,
 		});
 	}
+
+	// --- Q&A section ---
+
+	private createQaSection(): HTMLElement {
+		const sectionEl = activeDocument.createElement('section');
+		sectionEl.className = 'selection-translator-popover__qa';
+
+		const configReady = this.currentOptions?.qaConfigReady ?? false;
+		const toggleRow = this.createQaToggleRow(configReady);
+		sectionEl.appendChild(toggleRow);
+
+		if (this.qaExpanded) {
+			sectionEl.appendChild(this.createQaBody());
+		}
+
+		return sectionEl;
+	}
+
+	private createQaToggleRow(configReady: boolean): HTMLElement {
+		const rowEl = activeDocument.createElement('div');
+		rowEl.className = 'selection-translator-popover__qa-toggle';
+
+		const toggleButton = activeDocument.createElement('button');
+		toggleButton.type = 'button';
+		toggleButton.className =
+			'selection-translator-popover__qa-toggle-button';
+		toggleButton.textContent = t('popoverQaToggle');
+		toggleButton.setAttribute('aria-expanded', String(this.qaExpanded));
+		if (!configReady) {
+			toggleButton.disabled = true;
+			toggleButton.setAttribute(
+				'title',
+				t('popoverQaDisabledTooltip'),
+			);
+			toggleButton.setAttribute('aria-label', t('popoverQaToggle'));
+		} else {
+			toggleButton.setAttribute('title', t('popoverQaToggle'));
+			toggleButton.setAttribute('aria-label', t('popoverQaToggle'));
+			toggleButton.addEventListener('click', () => {
+				this.qaExpanded = !this.qaExpanded;
+				this.rebuildQaSection();
+			});
+		}
+		rowEl.appendChild(toggleButton);
+
+		const chevron = activeDocument.createElement('span');
+		chevron.className = 'selection-translator-popover__qa-chevron';
+		setIcon(chevron, this.qaExpanded ? 'chevron-down' : 'chevron-right');
+		chevron.setAttribute('aria-hidden', 'true');
+		rowEl.appendChild(chevron);
+
+		if (this.qaExpanded) {
+			const clearButton = createIconButton('trash', t('popoverQaClear'));
+			clearButton.classList.add(
+				'selection-translator-popover__qa-clear',
+			);
+			clearButton.disabled = this.qaStreaming?.status === 'processing';
+			clearButton.addEventListener('click', () => this.onClearQa());
+			rowEl.appendChild(clearButton);
+		}
+
+		return rowEl;
+	}
+
+	private createQaBody(): HTMLElement {
+		const bodyEl = activeDocument.createElement('div');
+		bodyEl.className = 'selection-translator-popover__qa-body';
+
+		const historyEl = activeDocument.createElement('div');
+		historyEl.className = 'selection-translator-popover__qa-history';
+		this.populateQaHistory(historyEl);
+		bodyEl.appendChild(historyEl);
+
+		bodyEl.appendChild(this.createQaInputRow());
+
+		return bodyEl;
+	}
+
+	private createQaInputRow(): HTMLElement {
+		const inputRowEl = activeDocument.createElement('div');
+		inputRowEl.className = 'selection-translator-popover__qa-input';
+
+		const textareaEl = activeDocument.createElement('textarea');
+		textareaEl.className = 'selection-translator-popover__qa-input-area';
+		textareaEl.rows = 2;
+		textareaEl.placeholder = t('popoverQaInputPlaceholder');
+		textareaEl.value = this.qaInputValue;
+		textareaEl.setAttribute('aria-label', t('popoverQaInputPlaceholder'));
+		textareaEl.addEventListener('input', () => {
+			this.qaInputValue = textareaEl.value;
+		});
+		textareaEl.addEventListener('keydown', (event) => {
+			if (
+				(event.ctrlKey || event.metaKey) &&
+				event.key === 'Enter'
+			) {
+				event.preventDefault();
+				this.sendQaQuestion(textareaEl);
+			}
+		});
+		inputRowEl.appendChild(textareaEl);
+
+		const sendButton = activeDocument.createElement('button');
+		sendButton.type = 'button';
+		sendButton.className =
+			'clickable-icon selection-translator-popover__qa-send';
+		sendButton.setAttribute('aria-label', t('popoverQaSend'));
+		sendButton.setAttribute('title', t('popoverQaSend'));
+		setIcon(sendButton, 'send');
+		sendButton.addEventListener('click', () => {
+			this.sendQaQuestion(textareaEl);
+		});
+		inputRowEl.appendChild(sendButton);
+
+		return inputRowEl;
+	}
+
+	private sendQaQuestion(textareaEl: HTMLTextAreaElement) {
+		const question = textareaEl.value.trim();
+		if (!question || this.qaStreaming?.status === 'processing') {
+			return;
+		}
+		textareaEl.value = '';
+		this.qaInputValue = '';
+		this.onAsk(question);
+	}
+
+	private populateQaHistory(historyEl: Element) {
+		for (const turn of this.qaHistory) {
+			historyEl.appendChild(createQaMessage(turn.role, turn.content));
+		}
+		if (this.qaStreaming) {
+			historyEl.appendChild(
+				createQaMessage('user', this.qaStreaming.question),
+			);
+			const isProcessing = this.qaStreaming.status === 'processing';
+			const assistantEl = createQaMessage(
+				'assistant',
+				this.qaStreaming.answer ||
+					(isProcessing ? t('popoverQaThinking') : ''),
+			);
+			assistantEl.classList.add(
+				isProcessing
+					? 'selection-translator-popover__qa-message--streaming'
+					: 'selection-translator-popover__qa-message--fail',
+			);
+			historyEl.appendChild(assistantEl);
+		}
+		historyEl.scrollTop = historyEl.scrollHeight;
+	}
+
+	private rebuildQaSection(): void {
+		if (!this.containerEl || !this.currentOptions?.qaEnabled) {
+			return;
+		}
+		const oldSection = this.containerEl.querySelector(
+			'.selection-translator-popover__qa',
+		);
+		const newSection = this.createQaSection();
+		if (oldSection) {
+			oldSection.replaceWith(newSection);
+		}
+	}
+
+	private rebuildQaHistory(): void {
+		const historyEl = this.containerEl?.querySelector(
+			'.selection-translator-popover__qa-history',
+		);
+		if (!historyEl) {
+			return;
+		}
+		historyEl.replaceChildren();
+		this.populateQaHistory(historyEl);
+	}
+
+	private updateQaClearButton(): void {
+		const clearButton = this.containerEl?.querySelector(
+			'.selection-translator-popover__qa-clear',
+		);
+		if (clearButton instanceof HTMLButtonElement) {
+			clearButton.disabled = this.qaStreaming?.status === 'processing';
+		}
+	}
+
+	// --- Q&A incremental streaming API (called by the plugin) ---
+
+	resetQa(): void {
+		this.qaHistory = [];
+		this.qaStreaming = null;
+		this.qaInputValue = '';
+	}
+
+	appendQaUserMessage(question: string): void {
+		this.qaStreaming = { question, answer: '', status: 'processing' };
+		const historyEl = this.containerEl?.querySelector(
+			'.selection-translator-popover__qa-history',
+		);
+		if (historyEl) {
+			this.rebuildQaHistory();
+			this.updateQaClearButton();
+		} else {
+			this.qaExpanded = true;
+			this.rebuildQaSection();
+		}
+	}
+
+	appendQaChunk(chunk: string): void {
+		if (this.qaStreaming?.status !== 'processing') {
+			return;
+		}
+		this.qaStreaming.answer += chunk;
+		const streamingContent = this.containerEl?.querySelector(
+			'.selection-translator-popover__qa-message--streaming .selection-translator-popover__qa-message-content',
+		);
+		if (streamingContent) {
+			streamingContent.textContent = this.qaStreaming.answer;
+		}
+	}
+
+	finishQaAnswer(): void {
+		if (this.qaStreaming?.status !== 'processing') {
+			return;
+		}
+		const streamingEl = this.containerEl?.querySelector(
+			'.selection-translator-popover__qa-message--streaming',
+		);
+		streamingEl?.classList.remove(
+			'selection-translator-popover__qa-message--streaming',
+		);
+		this.qaHistory.push(
+			{ role: 'user', content: this.qaStreaming.question },
+			{ role: 'assistant', content: this.qaStreaming.answer },
+		);
+		this.qaStreaming = null;
+		this.updateQaClearButton();
+	}
+
+	failQa(error: string): void {
+		if (!this.qaStreaming) {
+			return;
+		}
+		// Keep the failed turn in state (status 'fail') so a translation
+		// re-render rebuilds it from `populateQaHistory` instead of dropping
+		// the error. It is cleared when the user re-asks or clears.
+		this.qaStreaming.status = 'fail';
+		this.qaStreaming.answer = t('popoverQaFailed', { message: error });
+		this.rebuildQaHistory();
+		this.updateQaClearButton();
+	}
+
+	clearQaDisplay(): void {
+		this.qaHistory = [];
+		this.qaStreaming = null;
+		this.rebuildQaHistory();
+		this.updateQaClearButton();
+	}
 }
 
 function createSection(label: string, text: string) {
@@ -596,6 +890,47 @@ function getSourceInputValue(containerEl: HTMLElement | null) {
 		return null;
 	}
 	return inputEl.value;
+}
+
+function getQaInputValue(containerEl: HTMLElement | null) {
+	const inputEl = containerEl?.querySelector(
+		'.selection-translator-popover__qa-input-area',
+	);
+	if (!(inputEl instanceof HTMLTextAreaElement)) {
+		return null;
+	}
+	return inputEl.value;
+}
+
+function isQaInputFocused(containerEl: HTMLElement | null) {
+	const inputEl = containerEl?.querySelector(
+		'.selection-translator-popover__qa-input-area',
+	);
+	return (
+		inputEl instanceof HTMLTextAreaElement &&
+		activeDocument.activeElement === inputEl
+	);
+}
+
+function focusQaInput(containerEl: HTMLElement | null) {
+	const inputEl = containerEl?.querySelector(
+		'.selection-translator-popover__qa-input-area',
+	);
+	if (inputEl instanceof HTMLTextAreaElement) {
+		inputEl.focus();
+		const length = inputEl.value.length;
+		inputEl.setSelectionRange(length, length);
+	}
+}
+
+function createQaMessage(role: 'user' | 'assistant', content: string) {
+	const messageEl = activeDocument.createElement('div');
+	messageEl.className = `selection-translator-popover__qa-message selection-translator-popover__qa-message--${role}`;
+	const contentEl = activeDocument.createElement('div');
+	contentEl.className = 'selection-translator-popover__qa-message-content';
+	contentEl.textContent = content;
+	messageEl.appendChild(contentEl);
+	return messageEl;
 }
 
 function createIconButton(icon: string, label: string) {

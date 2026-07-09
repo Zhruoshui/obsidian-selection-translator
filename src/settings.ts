@@ -56,6 +56,12 @@ export interface SelectionTranslatorSettings {
 	retryBaseDelayMs: number;
 	retryMaxDelayMs: number;
 	retryJitterRatio: number;
+	aiQaEnabled: boolean;
+	aiApiBaseUrl: string;
+	aiApiKey: string;
+	aiModel: string;
+	aiSystemPrompt: string;
+	aiTemperature: number;
 }
 
 export const LEGACY_DEFAULT_PROMPT =
@@ -63,6 +69,9 @@ export const LEGACY_DEFAULT_PROMPT =
 
 export const DEFAULT_PROMPT =
 	'Translate the user text from {sourceLanguage} into {targetLanguage}. Output only the translated text. Preserve Markdown formatting, code blocks, URLs, proper nouns, terminology, line breaks, and punctuation. Do not explain, summarize, or add commentary.';
+
+export const AI_DEFAULT_SYSTEM_PROMPT =
+	'You are a helpful assistant. Answer the user questions about the selected text below. If a question goes beyond the selected text, you may use general knowledge, but keep the answer concise.\n\nSelected text:\n{selectedText}';
 
 export const DEFAULT_SETTINGS: SelectionTranslatorSettings = {
 	provider: DEFAULT_TEXT_TRANSLATION_PROVIDER,
@@ -95,9 +104,15 @@ export const DEFAULT_SETTINGS: SelectionTranslatorSettings = {
 	retryBaseDelayMs: 500,
 	retryMaxDelayMs: 3000,
 	retryJitterRatio: 0.2,
+	aiQaEnabled: false,
+	aiApiBaseUrl: 'https://api.openai.com/v1',
+	aiApiKey: '',
+	aiModel: '',
+	aiSystemPrompt: AI_DEFAULT_SYSTEM_PROMPT,
+	aiTemperature: 0.3,
 };
 
-type SettingsTabId = 'provider' | 'dictionary' | 'popover' | 'advanced';
+type SettingsTabId = 'provider' | 'dictionary' | 'popover' | 'advanced' | 'ai-qa';
 
 const SETTINGS_TABS: Array<{
 	id: SettingsTabId;
@@ -105,12 +120,14 @@ const SETTINGS_TABS: Array<{
 		| 'settingsTabProvider'
 		| 'settingsTabDictionary'
 		| 'settingsTabPopover'
-		| 'settingsTabAdvanced';
+		| 'settingsTabAdvanced'
+		| 'settingsTabAiQa';
 }> = [
 	{ id: 'provider', labelKey: 'settingsTabProvider' },
 	{ id: 'dictionary', labelKey: 'settingsTabDictionary' },
 	{ id: 'popover', labelKey: 'settingsTabPopover' },
 	{ id: 'advanced', labelKey: 'settingsTabAdvanced' },
+	{ id: 'ai-qa', labelKey: 'settingsTabAiQa' },
 ];
 
 const TRANSLATION_PROVIDERS: Array<{
@@ -201,6 +218,9 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 				return;
 			case 'advanced':
 				this.renderAdvancedSettings(panelEl);
+				return;
+			case 'ai-qa':
+				this.renderAiQaSettings(panelEl);
 				return;
 		}
 	}
@@ -745,6 +765,123 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
+	}
+
+	private renderAiQaSettings(containerEl: HTMLElement) {
+		new Setting(containerEl)
+			.setName(t('settingsAiQaHeadingName'))
+			.setDesc(t('settingsAiQaHeadingDesc'));
+
+		new Setting(containerEl)
+			.setName(t('settingsAiQaEnabledName'))
+			.setDesc(t('settingsAiQaEnabledDesc'))
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.aiQaEnabled)
+					.onChange(async (value) => {
+						this.plugin.settings.aiQaEnabled = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsAiApiBaseUrlName'))
+			.setDesc(t('settingsAiApiBaseUrlDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(DEFAULT_SETTINGS.aiApiBaseUrl)
+					.setValue(this.plugin.settings.aiApiBaseUrl)
+					.onChange(async (value) => {
+						this.plugin.settings.aiApiBaseUrl = value.trim();
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsAiApiKeyName'))
+			.setDesc(t('settingsAiApiKeyDesc'))
+			.addText((text) => {
+				text.inputEl.type = 'password';
+				text
+					.setPlaceholder(t('settingsAiApiKeyPlaceholder'))
+					.setValue(this.plugin.settings.aiApiKey)
+					.onChange(async (value) => {
+						this.plugin.settings.aiApiKey = value.trim();
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName(t('settingsAiModelName'))
+			.setDesc(t('settingsAiModelDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(t('settingsAiModelPlaceholder'))
+					.setValue(this.plugin.settings.aiModel)
+					.onChange(async (value) => {
+						this.plugin.settings.aiModel = value.trim();
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsAiTemperatureName'))
+			.setDesc(t('settingsAiTemperatureDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(String(DEFAULT_SETTINGS.aiTemperature))
+					.setValue(String(this.plugin.settings.aiTemperature))
+					.onChange(async (value) => {
+						this.plugin.settings.aiTemperature = normalizeNumber(
+							value,
+							DEFAULT_SETTINGS.aiTemperature,
+							0,
+							2,
+						);
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsAiSystemPromptName'))
+			.setDesc(t('settingsAiSystemPromptDesc'))
+			.addTextArea((text) => {
+				text.inputEl.rows = 5;
+				text.inputEl.classList.add('selection-translator-settings-prompt');
+				text
+					.setPlaceholder(AI_DEFAULT_SYSTEM_PROMPT)
+					.setValue(this.plugin.settings.aiSystemPrompt)
+					.onChange(async (value) => {
+						this.plugin.settings.aiSystemPrompt =
+							value.trim() || AI_DEFAULT_SYSTEM_PROMPT;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName(t('settingsAiTestName'))
+			.setDesc(t('settingsAiTestDesc'))
+			.addButton((button) => {
+				button
+					.setButtonText(t('settingsAiTestButton'))
+					.onClick(async () => {
+						button.buttonEl.disabled = true;
+						button.setButtonText(t('settingsAiTestingButton'));
+						try {
+							await this.plugin.testAiConfig();
+							new Notice(t('settingsAiTestSucceeded'));
+						} catch (error) {
+							new Notice(
+								t('settingsAiTestFailed', {
+									message: getErrorMessage(error),
+								}),
+							);
+						} finally {
+							button.setButtonText(t('settingsAiTestButton'));
+							button.buttonEl.disabled = false;
+						}
+					});
+			});
 	}
 }
 

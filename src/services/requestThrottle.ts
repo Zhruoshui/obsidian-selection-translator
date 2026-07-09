@@ -2,11 +2,18 @@ import type { TextTranslationProviderId } from './languageCodes';
 
 export const DEFAULT_THROTTLE_MS = 1500;
 
+/**
+ * Throttle key. Translation providers use {@link TextTranslationProviderId};
+ * the AI Q&A path uses the literal `'ai-qa'`. A plain `string` keeps the
+ * throttle generic without forcing every caller into the provider union.
+ */
+export type RequestThrottleKey = TextTranslationProviderId | 'ai-qa';
+
 export class RequestThrottle {
-	private readonly lastSentAt = new Map<TextTranslationProviderId, number>();
+	private readonly lastSentAt = new Map<string, number>();
 
 	async wait(
-		provider: TextTranslationProviderId,
+		provider: RequestThrottleKey,
 		signal?: AbortSignal,
 		minIntervalMs: number = DEFAULT_THROTTLE_MS,
 	): Promise<void> {
@@ -31,7 +38,7 @@ export class RequestThrottle {
 		this.lastSentAt.set(provider, Date.now());
 	}
 
-	reset(provider?: TextTranslationProviderId): void {
+	reset(provider?: RequestThrottleKey): void {
 		if (provider === undefined) {
 			this.lastSentAt.clear();
 			return;

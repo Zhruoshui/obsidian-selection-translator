@@ -263,3 +263,170 @@
 	width: 100%;
 	min-height: 120px;
 }
+
+/* --- Q&A section --- */
+
+.selection-translator-popover__qa {
+	display: flex;
+	flex: 0 0 auto;
+	flex-direction: column;
+	min-width: 0;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background: var(--background-secondary);
+}
+
+@container (min-width: 520px) {
+	.selection-translator-popover__qa {
+		grid-column: 1 / -1;
+	}
+}
+
+.selection-translator-popover__qa-toggle {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-height: 28px;
+	padding: 3px 6px;
+}
+
+.selection-translator-popover__qa-toggle-button {
+	flex: 1 1 auto;
+	min-width: 0;
+	padding: 2px 4px;
+	border: 0;
+	background: transparent;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-weight: 600;
+	text-align: left;
+	cursor: pointer;
+}
+
+.selection-translator-popover__qa-toggle-button:hover:not(:disabled) {
+	color: var(--text-normal);
+}
+
+.selection-translator-popover__qa-toggle-button:disabled {
+	cursor: not-allowed;
+	opacity: 0.55;
+}
+
+.selection-translator-popover__qa-chevron {
+	flex: 0 0 auto;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	color: var(--text-faint);
+}
+
+.selection-translator-popover__qa-chevron svg {
+	width: 14px;
+	height: 14px;
+}
+
+.selection-translator-popover__qa-body {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 0;
+	padding: 0 6px 6px;
+}
+
+.selection-translator-popover__qa-history {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+	max-height: 240px;
+	overflow: auto;
+	padding: 2px;
+}
+
+.selection-translator-popover__qa-message {
+	min-width: 0;
+	padding: 5px 8px;
+	border-radius: 8px;
+	font-size: var(--font-ui-smaller);
+	line-height: 1.5;
+	overflow-wrap: anywhere;
+}
+
+.selection-translator-popover__qa-message--user {
+	align-self: flex-end;
+	max-width: 85%;
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.selection-translator-popover__qa-message--assistant {
+	align-self: flex-start;
+	max-width: 92%;
+	background: var(--background-modifier-form-field);
+	color: var(--text-normal);
+}
+
+.selection-translator-popover__qa-message--streaming {
+	opacity: 0.9;
+}
+
+.selection-translator-popover__qa-message--streaming::after {
+	content: "▋";
+	margin-left: 2px;
+	animation: selection-translator-qa-cursor 1s step-end infinite;
+}
+
+.selection-translator-popover__qa-message--fail {
+	border: 1px solid var(--text-error);
+	color: var(--text-error);
+}
+
+@keyframes selection-translator-qa-cursor {
+	50% {
+		opacity: 0;
+	}
+}
+
+.selection-translator-popover__qa-message-content {
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.selection-translator-popover__qa-input {
+	display: flex;
+	align-items: flex-end;
+	gap: 4px;
+	min-width: 0;
+}
+
+.selection-translator-popover__qa-input-area {
+	box-sizing: border-box;
+	flex: 1 1 auto;
+	min-width: 0;
+	max-height: 100px;
+	padding: 4px 7px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-family: inherit;
+	font-size: var(--font-ui-smaller);
+	line-height: 1.5;
+	resize: vertical;
+}
+
+.selection-translator-popover__qa-input-area:focus {
+	outline: 1px solid var(--interactive-accent);
+	outline-offset: -1px;
+}
+
+.selection-translator-popover__qa-send {
+	flex: 0 0 auto;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	justify-content: center;
+	cursor: pointer;
+}

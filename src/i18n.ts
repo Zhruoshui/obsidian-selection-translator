@@ -10,6 +10,7 @@ const en = {
 	settingsTabDictionary: 'Dictionary config',
 	settingsTabPopover: 'Popover config',
 	settingsTabAdvanced: 'Advanced',
+	settingsTabAiQa: 'AI Q&A',
 	settingsTranslationProviderName: 'Translation provider',
 	settingsTranslationProviderDesc:
 		'Choose the provider used for text translation. One selected English word is looked up in the dictionary automatically.',
@@ -136,6 +137,38 @@ const en = {
 	settingsRetryJitterRatioDesc:
 		'Random jitter as a fraction of the exponential delay (0-0.5).',
 
+	settingsAiQaHeadingName: 'AI Q&A',
+	settingsAiQaHeadingDesc:
+		'Ask follow-up questions about the selected text from inside the translation popover. This configuration is fully isolated from the translation provider.',
+	settingsAiQaEnabledName: 'Enable AI Q&A',
+	settingsAiQaEnabledDesc:
+		'Show the AI Q&A entry in the translation popover. Off by default.',
+	settingsAiApiBaseUrlName: 'AI API base URL',
+	settingsAiApiBaseUrlDesc: 'Base URL for the OpenAI-compatible chat API used by AI Q&A.',
+	settingsAiApiKeyName: 'AI API key',
+	settingsAiApiKeyDesc:
+		'Stored locally in Obsidian plugin data. It is not encrypted and is never logged by this plugin.',
+	settingsAiApiKeyPlaceholder: 'API key',
+	settingsAiModelName: 'AI model',
+	settingsAiModelDesc: 'Model name supported by your AI chat API.',
+	settingsAiModelPlaceholder: 'Model name',
+	settingsAiTemperatureName: 'AI temperature',
+	settingsAiTemperatureDesc:
+		'Lower values keep AI answers more deterministic.',
+	settingsAiSystemPromptName: 'AI system prompt',
+	settingsAiSystemPromptDesc:
+		'Use {selectedText} where the selected text should be inserted. If omitted, the selected text is appended automatically.',
+	settingsAiTestName: 'Test AI configuration',
+	settingsAiTestDesc: 'Send a short chat request to verify the AI configuration.',
+	settingsAiTestButton: 'Test',
+	settingsAiTestingButton: 'Testing...',
+	settingsAiTestSucceeded: 'AI configuration test succeeded.',
+	settingsAiTestFailed: 'AI configuration test failed: {message}',
+
+	noticeAiConfigIncomplete:
+		'AI Q&A is not available: configure API base URL, API key, and model in AI Q&A settings.',
+	noticeAiNotEnabled: 'AI Q&A is disabled. Enable it in AI Q&A settings.',
+
 	popoverAriaLabel: 'Selection translation',
 	popoverTitle: 'Selection translation',
 	popoverSelectedText: 'Selected text',
@@ -156,6 +189,15 @@ const en = {
 	popoverPronunciationUs: 'US',
 	popoverPlayPronunciation: 'Play {label} pronunciation',
 	popoverCopied: 'Translation copied.',
+
+	popoverQaToggle: 'AI Q&A',
+	popoverQaInputPlaceholder: 'Ask a question about the selected text...',
+	popoverQaSend: 'Send',
+	popoverQaClear: 'Clear Q&A history',
+	popoverQaThinking: 'Thinking...',
+	popoverQaFailed: 'Q&A failed: {message}',
+	popoverQaDisabledTooltip:
+		'Configure API base URL, API key, and model in AI Q&A settings to enable.',
 
 	dictionaryOnlyEnglishWord:
 		'Select one English word to look it up in the dictionary.',
@@ -189,6 +231,7 @@ const zhCN: TranslationDictionary = {
 	settingsTabDictionary: '词典配置',
 	settingsTabPopover: '悬浮窗配置',
 	settingsTabAdvanced: '高级',
+	settingsTabAiQa: 'AI 问答',
 	settingsTranslationProviderName: '翻译服务商',
 	settingsTranslationProviderDesc:
 		'选择文本翻译使用的服务商。只选择一个英文单词时会自动走词典查询。',
@@ -300,6 +343,36 @@ const zhCN: TranslationDictionary = {
 	settingsRetryJitterRatioName: '抖动比例',
 	settingsRetryJitterRatioDesc: '相对指数延迟的随机抖动比例（0-0.5）。',
 
+	settingsAiQaHeadingName: 'AI 问答',
+	settingsAiQaHeadingDesc:
+		'在翻译浮窗内对选中文本进行追问。此配置与翻译服务商完全隔离。',
+	settingsAiQaEnabledName: '启用 AI 问答',
+	settingsAiQaEnabledDesc: '在翻译浮窗中显示 AI 问答入口。默认关闭。',
+	settingsAiApiBaseUrlName: 'AI API 基础 URL',
+	settingsAiApiBaseUrlDesc: 'AI 问答使用的 OpenAI 兼容聊天 API 基础 URL。',
+	settingsAiApiKeyName: 'AI API 密钥',
+	settingsAiApiKeyDesc:
+		'存储在本地 Obsidian 插件数据中。它不会被加密，本插件也不会记录它。',
+	settingsAiApiKeyPlaceholder: 'API 密钥',
+	settingsAiModelName: 'AI 模型',
+	settingsAiModelDesc: 'AI 聊天 API 支持的模型名称。',
+	settingsAiModelPlaceholder: '模型名称',
+	settingsAiTemperatureName: 'AI 温度',
+	settingsAiTemperatureDesc: '较低的值会让 AI 回答更稳定。',
+	settingsAiSystemPromptName: 'AI 系统提示词',
+	settingsAiSystemPromptDesc:
+		'使用 {selectedText} 表示选中文本的插入位置。如果不包含该占位符，选中文本会自动追加到末尾。',
+	settingsAiTestName: '测试 AI 配置',
+	settingsAiTestDesc: '发送一个简短的聊天请求来验证 AI 配置。',
+	settingsAiTestButton: '测试',
+	settingsAiTestingButton: '测试中...',
+	settingsAiTestSucceeded: 'AI 配置测试成功。',
+	settingsAiTestFailed: 'AI 配置测试失败：{message}',
+
+	noticeAiConfigIncomplete:
+		'AI 问答不可用：请在 AI 问答设置中配置 API 基础 URL、API 密钥和模型。',
+	noticeAiNotEnabled: 'AI 问答已关闭。请在 AI 问答设置中启用。',
+
 	popoverAriaLabel: '划词翻译',
 	popoverTitle: '划词翻译',
 	popoverSelectedText: '选中文本',
@@ -320,6 +393,14 @@ const zhCN: TranslationDictionary = {
 	popoverPronunciationUs: '美音',
 	popoverPlayPronunciation: '播放{label}发音',
 	popoverCopied: '译文已复制。',
+
+	popoverQaToggle: 'AI 问答',
+	popoverQaInputPlaceholder: '对选中文本提问...',
+	popoverQaSend: '发送',
+	popoverQaClear: '清空问答历史',
+	popoverQaThinking: '思考中...',
+	popoverQaFailed: '问答失败：{message}',
+	popoverQaDisabledTooltip: '请在 AI 问答设置中配置 API 基础 URL、API 密钥和模型以启用。',
 
 	dictionaryOnlyEnglishWord: '请选择一个英文单词进行词典查询。',
 	dictionaryNoResult: '词典服务没有返回该单词的释义。',

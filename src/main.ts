@@ -11,6 +11,15 @@ import { TranslationCache, type CacheConfig } from './services/translationCache'
 import { RequestThrottle } from './services/requestThrottle';
 import type { RetryConfig } from './services/translationService';
 import {
+	testChatConnection,
+	validateConfig,
+	type ChatClientConfig,
+} from './services/openAIChatClient';
+import {
+	QaAgentService,
+	type QaAgentConfig,
+} from './services/qaAgent';
+import {
 	DEFAULT_SETTINGS,
 	LEGACY_DEFAULT_PROMPT,
 	SelectionTranslatorSettingTab,
@@ -40,6 +49,9 @@ export default class SelectionTranslatorPlugin extends Plugin {
 	private lastTranslatedSelection = '';
 	private selectionChangeTimeout: number | null = null;
 	private flushTimeout: number | null = null;
+	private qaAgent = new QaAgentService();
+	private currentQaAbortController: AbortController | null = null;
+	private lastQaContext = '';
 
 	async onload() {
 		await this.loadSettings();
@@ -51,7 +63,15 @@ export default class SelectionTranslatorPlugin extends Plugin {
 			},
 			() => {
 				this.stopCurrentTranslation();
+				this.stopCurrentQa();
 				this.lastTranslatedSelection = '';
+				this.lastQaContext = '';
+			},
+			(question) => {
+				void this.askQuestion(question);
+			},
+			() => {
+				this.clearQa();
 			},
 		);
 
@@ -70,6 +90,7 @@ export default class SelectionTranslatorPlugin extends Plugin {
 
 	onunload() {
 		this.stopCurrentTranslation();
+		this.stopCurrentQa();
 		this.popover.close();
 		this.translationCache.invalidate();
 	}
@@ -169,6 +190,14 @@ export default class SelectionTranslatorPlugin extends Plugin {
 
 		this.lastTranslatedSelection = text;
 		this.stopCurrentTranslation();
+
+		if (this.settings.aiQaEnabled && text !== this.lastQaContext) {
+			this.stopCurrentQa();
+			this.qaAgent.reset(text, this.buildAiConfig());
+			this.popover.resetQa();
+			this.lastQaContext = text;
+		}
+
 		const task = createTranslationTask(text);
 		this.popover.show(task, this.getPopoverOptions());
 
@@ -277,6 +306,8 @@ export default class SelectionTranslatorPlugin extends Plugin {
 	private getPopoverOptions() {
 		return {
 			showSelectedText: this.settings.showSelectedTextInPopover,
+			qaEnabled: this.settings.aiQaEnabled,
+			qaConfigReady: this.isAiConfigReady(),
 		};
 	}
 
@@ -343,6 +374,96 @@ export default class SelectionTranslatorPlugin extends Plugin {
 
 		this.currentAbortController?.abort();
 		this.currentAbortController = null;
+	}
+
+	// --- AI Q&A ---
+
+	private isAiConfigReady(): boolean {
+		return (
+			this.settings.aiApiBaseUrl.trim().length > 0 &&
+			this.settings.aiApiKey.trim().length > 0 &&
+			this.settings.aiModel.trim().length > 0
+		);
+	}
+
+	private buildAiConfig(): QaAgentConfig {
+		return {
+			apiBaseUrl: this.settings.aiApiBaseUrl,
+			apiKey: this.settings.aiApiKey,
+			model: this.settings.aiModel,
+			temperature: this.settings.aiTemperature,
+			systemPrompt: this.settings.aiSystemPrompt,
+		};
+	}
+
+	private stopCurrentQa() {
+		this.currentQaAbortController?.abort();
+		this.currentQaAbortController = null;
+	}
+
+	private async askQuestion(question: string) {
+		if (!this.settings.aiQaEnabled) {
+			new Notice(t('noticeAiNotEnabled'));
+			return;
+		}
+		if (!this.isAiConfigReady()) {
+			new Notice(t('noticeAiConfigIncomplete'));
+			return;
+		}
+
+		this.stopCurrentQa();
+		const abortController = new AbortController();
+		this.currentQaAbortController = abortController;
+		this.popover.appendQaUserMessage(question);
+
+		try {
+			await this.requestThrottle.wait(
+				'ai-qa',
+				abortController.signal,
+				this.settings.throttleMinIntervalMs,
+			);
+			if (abortController.signal.aborted) {
+				return;
+			}
+
+			await this.qaAgent.ask(question, this.buildAiConfig(), {
+				signal: abortController.signal,
+				onChunk: (chunk) => {
+					this.popover.appendQaChunk(chunk);
+				},
+			});
+			if (abortController.signal.aborted) {
+				return;
+			}
+			this.popover.finishQaAnswer();
+		} catch (error) {
+			if (abortController.signal.aborted) {
+				return;
+			}
+			this.popover.failQa(getErrorMessage(error));
+		} finally {
+			if (this.currentQaAbortController === abortController) {
+				this.currentQaAbortController = null;
+			}
+		}
+	}
+
+	private clearQa() {
+		this.stopCurrentQa();
+		this.qaAgent.clear();
+		this.popover.clearQaDisplay();
+	}
+
+	async testAiConfig() {
+		const config = this.buildAiConfig();
+		const clientConfig: ChatClientConfig = {
+			apiBaseUrl: config.apiBaseUrl,
+			apiKey: config.apiKey,
+			model: config.model,
+			temperature: config.temperature,
+		};
+		validateConfig(clientConfig);
+		await testChatConnection(clientConfig);
 	}
 }
 
