@@ -21,12 +21,36 @@ import type {
 interface TranslationRequestOptions {
 	signal?: AbortSignal;
 	onChunk?: (chunk: string) => void;
+	retryConfig?: RetryConfig;
 }
 
-const RETRY_MAX_ATTEMPTS = 2;
-const RETRY_BASE_DELAY_MS = 500;
-const RETRY_MAX_DELAY_MS = 3000;
-const RETRY_JITTER_RATIO = 0.2;
+export interface RetryConfig {
+	enabled: boolean;
+	maxAttempts: number;
+	baseDelayMs: number;
+	maxDelayMs: number;
+	jitterRatio: number;
+}
+
+export const DEFAULT_RETRY_CONFIG: RetryConfig = {
+	enabled: true,
+	maxAttempts: 2,
+	baseDelayMs: 500,
+	maxDelayMs: 3000,
+	jitterRatio: 0.2,
+};
+
+const RETRY_KEYWORDS = [
+	'invalid access limit',
+	'rate limit',
+	'too many requests',
+	'quota exceeded',
+	'request timeout',
+	'temporarily unavailable',
+	'service unavailable',
+	'invalid_request_error',
+	'rate_limit_error',
+];
 
 export class TranslationService {
 	private readonly openAI = new OpenAICompatibleChatService();
@@ -81,8 +105,8 @@ export class TranslationService {
 			}
 		};
 
-		return withRetry(invoke, options.signal).then((result) =>
-			collapseWhitespaceOnResult(result).trim(),
+		return withRetry(invoke, options.signal, options.retryConfig).then(
+			(result) => collapseWhitespaceOnResult(result).trim(),
 		);
 	}
 }
@@ -416,17 +440,29 @@ function ensureSuccessfulResponse(status: number, json: unknown, text: string) {
 	if (status >= 200 && status < 300) {
 		return;
 	}
-	throw new Error(getProviderError(json, text));
+	const error = new Error(getProviderError(json, text)) as Error & {
+		cause?: { status: number };
+	};
+	error.cause = { status };
+	throw error;
 }
 
-async function withRetry(
+export async function withRetry(
 	invoke: () => Promise<string>,
 	signal?: AbortSignal,
+	config: RetryConfig = DEFAULT_RETRY_CONFIG,
 ): Promise<string> {
+	if (!config.enabled || config.maxAttempts <= 0) {
+		if (signal?.aborted) {
+			throw createAbortError();
+		}
+		return invoke();
+	}
+
 	let attempt = 0;
 	let lastError: unknown;
 
-	while (attempt <= RETRY_MAX_ATTEMPTS) {
+	while (attempt < config.maxAttempts) {
 		if (signal?.aborted) {
 			throw createAbortError();
 		}
@@ -437,10 +473,10 @@ async function withRetry(
 			if (signal?.aborted) {
 				throw createAbortError();
 			}
-			if (!isRetryableError(error) || attempt === RETRY_MAX_ATTEMPTS) {
+			if (!isRetryableError(error) || attempt === config.maxAttempts - 1) {
 				throw error;
 			}
-			const delay = computeBackoffDelay(attempt);
+			const delay = computeBackoffDelay(attempt, config);
 			await sleep(delay, signal);
 			attempt += 1;
 		}
@@ -449,13 +485,19 @@ async function withRetry(
 	throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
-function isRetryableError(error: unknown): boolean {
+export function isRetryableError(error: unknown): boolean {
 	if (!(error instanceof Error)) {
 		return false;
 	}
 	if (error.name === 'AbortError') {
 		return false;
 	}
+
+	const causeStatus = readCauseStatus(error);
+	if (causeStatus !== undefined) {
+		return causeStatus === 429 || (causeStatus >= 500 && causeStatus < 600);
+	}
+
 	const message = error.message;
 	if (!message) {
 		return false;
@@ -471,22 +513,21 @@ function isRetryableError(error: unknown): boolean {
 	return status === 429 || (status >= 500 && status < 600);
 }
 
-const RETRY_KEYWORDS = [
-	'invalid access limit',
-	'rate limit',
-	'too many requests',
-	'quota exceeded',
-	'request timeout',
-	'temporarily unavailable',
-	'service unavailable',
-	'invalid_request_error',
-	'rate_limit_error',
-];
+function readCauseStatus(error: Error): number | undefined {
+	const cause: unknown = (error as Error & { cause?: unknown }).cause;
+	if (cause && typeof cause === 'object' && 'status' in cause) {
+		const statusValue = cause.status;
+		if (typeof statusValue === 'number' && Number.isFinite(statusValue)) {
+			return statusValue;
+		}
+	}
+	return undefined;
+}
 
-function computeBackoffDelay(attempt: number): number {
-	const exponential = RETRY_BASE_DELAY_MS * 2 ** attempt;
-	const jitter = exponential * RETRY_JITTER_RATIO * (Math.random() * 2 - 1);
-	return Math.min(RETRY_MAX_DELAY_MS, Math.max(0, exponential + jitter));
+function computeBackoffDelay(attempt: number, config: RetryConfig): number {
+	const exponential = config.baseDelayMs * 2 ** attempt;
+	const jitter = exponential * config.jitterRatio * (Math.random() * 2 - 1);
+	return Math.min(config.maxDelayMs, Math.max(0, exponential + jitter));
 }
 
 function sleep(delay: number, signal?: AbortSignal): Promise<void> {
@@ -664,9 +705,10 @@ function parseYoudaoDictionaryHtml(html: string): TranslationResult {
 function parseBingDictionaryHtml(html: string): TranslationResult {
 	const document = parseDictionaryDocument(html);
 	const audio = getBingPronunciationAudio(document);
+	const description = extractMetaDescription(html);
 	const lines = [
 		...formatPronunciationAudioLines(audio),
-		...getFirstNonEmptyLineGroup(
+		...(description ? splitBingDescription(description) : getFirstNonEmptyLineGroup(
 			document,
 			[
 				'.qdef .hd_area',
@@ -676,7 +718,7 @@ function parseBingDictionaryHtml(html: string): TranslationResult {
 				'.hd_area',
 			],
 			12,
-		),
+		)),
 	];
 
 	return {
@@ -685,27 +727,132 @@ function parseBingDictionaryHtml(html: string): TranslationResult {
 	};
 }
 
+function extractMetaDescription(html: string): string {
+	const match = html.match(
+		/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i,
+	);
+	return match ? decodeHtmlEntities(match[1] ?? '') : '';
+}
+
+function decodeHtmlEntities(text: string): string {
+	return text
+		.replace(/&nbsp;/g, ' ')
+		.replace(/&amp;/g, '&')
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&quot;/g, '"')
+		.replace(/&#39;/g, "'");
+}
+
+function splitBingDescription(description: string): string[] {
+	const text = description.replace(/"\s*\/>/g, '').trim();
+	if (!text) {
+		return [];
+	}
+	const segments = text
+		.split(/[，;,；;]/)
+		.map((part) => part.trim())
+		.filter((part) => part.length > 0 && part !== '网络释义');
+	if (segments.length <= 3) {
+		return [text];
+	}
+	const out: string[] = [];
+	for (const segment of segments.slice(3)) {
+		if (segment.includes('网络释义')) {
+			const lastSemi = segment.lastIndexOf('；');
+			if (lastSemi > 0) {
+				out.push(segment.slice(0, lastSemi));
+			}
+		} else {
+			out.push(segment);
+		}
+	}
+	return out.length > 0 ? out : [text];
+}
+
 function parseCambridgeDictionaryHtml(html: string): TranslationResult {
 	const document = parseDictionaryDocument(html);
 	const audio = getCambridgePronunciationAudio(document);
+	const structuredLines = extractCambridgeEntries(document);
 	const lines = [
 		...formatPronunciationAudioLines(audio),
-		...getFirstNonEmptyLineGroup(
-			document,
-			[
-				'.def-block',
-				'.pr.entry-body__el',
-				'.sense-body',
-				'.entry-body',
-			],
-			16,
-		),
+		...(structuredLines.length > 0
+			? structuredLines
+			: getFirstNonEmptyLineGroup(
+					document,
+					[
+						'.def-block',
+						'.entry-body__el',
+						'.sense-body',
+						'.entry-body',
+					],
+					16,
+				)),
 	];
 
 	return {
 		text: uniqueLines(lines).join('\n').trim(),
 		audio,
 	};
+}
+
+function extractCambridgeEntries(document: Document): string[] {
+	const blocks = Array.from(
+		document.querySelectorAll('.entry-body__el'),
+	);
+	if (blocks.length === 0) {
+		return [];
+	}
+	const out: string[] = [];
+	for (const block of blocks) {
+		const lines: string[] = [];
+		const pos = block.querySelector('.posgram')?.textContent?.trim() ?? '';
+		if (pos) {
+			lines.push(pos);
+		}
+		const prons: string[] = [];
+		block
+			.querySelectorAll('.pos-header span[class*="dpron-"]')
+			.forEach((value) => {
+				const pron = value.querySelector('.dpron')?.textContent?.trim() ?? '';
+				const region =
+					value.querySelector('.region')?.textContent?.trim() ?? '';
+				if (pron) {
+					prons.push(`${region ? `${region} ` : ''}[${pron}]`);
+				}
+			});
+		if (prons.length > 0) {
+			lines.push(prons.join(' '));
+		}
+		const defs: string[] = [];
+		block.querySelectorAll('.dsense').forEach((value, i) => {
+			const guideword =
+				value
+					.querySelector('.guideword')
+					?.textContent?.replace(/\s+/g, ' ')
+					.trim() ?? '';
+			const defEn = value.querySelector('.def')?.textContent?.trim() ?? '';
+			const def =
+				value.querySelector('.trans[lang]')?.textContent?.trim() ?? '';
+			const head = `\t${i + 1}.${guideword ? ` ${guideword}` : ''}${
+				defEn ? ` ${defEn}` : ''
+			}`.trim();
+			if (head) {
+				defs.push(head);
+			}
+			if (def) {
+				defs.push(`\t\t${def}`);
+			}
+		});
+		if (defs.length > 0) {
+			lines.push(...defs);
+		}
+		const blockText = lines.join('\n').trim();
+		if (blockText) {
+			out.push(blockText);
+		}
+	}
+	return out;
 }
 
 function parseDictionaryDocument(html: string) {
@@ -745,12 +892,12 @@ function getYoudaoPronunciationAudio(document: Document) {
 function getBingPronunciationAudio(document: Document) {
 	return getPronunciationAudioFromElements(
 		document,
-		['.hd_area a[onclick*="playSound"]', 'a[onclick*="playSound"]'],
+		['.hd_area .bigaud[data-mp3link]', '.bigaud[data-mp3link]'],
 		(element, index) => {
-			const onclick = element.getAttribute('onclick') ?? '';
+			const url = element.getAttribute('data-mp3link') ?? '';
 			return createPronunciationAudioFromElement(
 				element,
-				matchQuotedUrl(onclick),
+				url,
 				getBingAudioAccent(element, index),
 				'https://cn.bing.com',
 			);
@@ -961,10 +1108,6 @@ function getNearbyPhonetic(element: Element) {
 		}
 	}
 	return '';
-}
-
-function matchQuotedUrl(text: string) {
-	return /['"]([^'"]+\.(?:mp3|wav)(?:\?[^'"]*)?)['"]/i.exec(text)?.[1] ?? '';
 }
 
 function getAbsoluteDictionaryUrl(url: string, baseUrl: string) {

@@ -47,6 +47,15 @@ export interface SelectionTranslatorSettings {
 	temperature: number;
 	maxSelectionLength: number;
 	showSelectedTextInPopover: boolean;
+	cacheEnabled: boolean;
+	cacheTtlSeconds: number;
+	cacheMaxEntries: number;
+	throttleMinIntervalMs: number;
+	retryEnabled: boolean;
+	retryMaxAttempts: number;
+	retryBaseDelayMs: number;
+	retryMaxDelayMs: number;
+	retryJitterRatio: number;
 }
 
 export const LEGACY_DEFAULT_PROMPT =
@@ -77,20 +86,31 @@ export const DEFAULT_SETTINGS: SelectionTranslatorSettings = {
 	temperature: 0.2,
 	maxSelectionLength: 4000,
 	showSelectedTextInPopover: true,
+	cacheEnabled: true,
+	cacheTtlSeconds: 600,
+	cacheMaxEntries: 256,
+	throttleMinIntervalMs: 1500,
+	retryEnabled: true,
+	retryMaxAttempts: 2,
+	retryBaseDelayMs: 500,
+	retryMaxDelayMs: 3000,
+	retryJitterRatio: 0.2,
 };
 
-type SettingsTabId = 'provider' | 'dictionary' | 'popover';
+type SettingsTabId = 'provider' | 'dictionary' | 'popover' | 'advanced';
 
 const SETTINGS_TABS: Array<{
 	id: SettingsTabId;
 	labelKey:
 		| 'settingsTabProvider'
 		| 'settingsTabDictionary'
-		| 'settingsTabPopover';
+		| 'settingsTabPopover'
+		| 'settingsTabAdvanced';
 }> = [
 	{ id: 'provider', labelKey: 'settingsTabProvider' },
 	{ id: 'dictionary', labelKey: 'settingsTabDictionary' },
 	{ id: 'popover', labelKey: 'settingsTabPopover' },
+	{ id: 'advanced', labelKey: 'settingsTabAdvanced' },
 ];
 
 const TRANSLATION_PROVIDERS: Array<{
@@ -178,6 +198,9 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 				return;
 			case 'popover':
 				this.renderPopoverSettings(panelEl);
+				return;
+			case 'advanced':
+				this.renderAdvancedSettings(panelEl);
 				return;
 		}
 	}
@@ -562,6 +585,163 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.showSelectedTextInPopover)
 					.onChange(async (value) => {
 						this.plugin.settings.showSelectedTextInPopover = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+	}
+
+	private renderAdvancedSettings(containerEl: HTMLElement) {
+		new Setting(containerEl)
+			.setName(t('settingsAdvancedCacheHeadingName'))
+			.setDesc(t('settingsAdvancedCacheHeadingDesc'));
+
+		new Setting(containerEl)
+			.setName(t('settingsCacheEnabledName'))
+			.setDesc(t('settingsCacheEnabledDesc'))
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.cacheEnabled)
+					.onChange(async (value) => {
+						this.plugin.settings.cacheEnabled = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsCacheTtlName'))
+			.setDesc(t('settingsCacheTtlDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(String(DEFAULT_SETTINGS.cacheTtlSeconds))
+					.setValue(String(this.plugin.settings.cacheTtlSeconds))
+					.onChange(async (value) => {
+						const parsed = Number(value);
+						const valid = Number.isFinite(parsed) && (parsed === 0 || (parsed >= 60 && parsed <= 86400));
+						this.plugin.settings.cacheTtlSeconds = valid
+							? Math.round(parsed)
+							: DEFAULT_SETTINGS.cacheTtlSeconds;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsCacheMaxEntriesName'))
+			.setDesc(t('settingsCacheMaxEntriesDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(String(DEFAULT_SETTINGS.cacheMaxEntries))
+					.setValue(String(this.plugin.settings.cacheMaxEntries))
+					.onChange(async (value) => {
+						const parsed = Number(value);
+						const valid = Number.isFinite(parsed) && parsed >= 1 && parsed <= 10000;
+						this.plugin.settings.cacheMaxEntries = valid
+							? Math.round(parsed)
+							: DEFAULT_SETTINGS.cacheMaxEntries;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsAdvancedThrottleHeadingName'))
+			.setDesc(t('settingsAdvancedThrottleHeadingDesc'));
+
+		new Setting(containerEl)
+			.setName(t('settingsThrottleMinIntervalName'))
+			.setDesc(t('settingsThrottleMinIntervalDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(String(DEFAULT_SETTINGS.throttleMinIntervalMs))
+					.setValue(String(this.plugin.settings.throttleMinIntervalMs))
+					.onChange(async (value) => {
+						const parsed = Number(value);
+						const valid = Number.isFinite(parsed) && parsed >= 0 && parsed <= 60000;
+						this.plugin.settings.throttleMinIntervalMs = valid
+							? Math.round(parsed)
+							: DEFAULT_SETTINGS.throttleMinIntervalMs;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsAdvancedRetryHeadingName'))
+			.setDesc(t('settingsAdvancedRetryHeadingDesc'));
+
+		new Setting(containerEl)
+			.setName(t('settingsRetryEnabledName'))
+			.setDesc(t('settingsRetryEnabledDesc'))
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.retryEnabled)
+					.onChange(async (value) => {
+						this.plugin.settings.retryEnabled = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsRetryMaxAttemptsName'))
+			.setDesc(t('settingsRetryMaxAttemptsDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(String(DEFAULT_SETTINGS.retryMaxAttempts))
+					.setValue(String(this.plugin.settings.retryMaxAttempts))
+					.onChange(async (value) => {
+						const parsed = Number(value);
+						const valid = Number.isFinite(parsed) && parsed >= 0 && parsed <= 5;
+						this.plugin.settings.retryMaxAttempts = valid
+							? Math.round(parsed)
+							: DEFAULT_SETTINGS.retryMaxAttempts;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsRetryBaseDelayName'))
+			.setDesc(t('settingsRetryBaseDelayDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(String(DEFAULT_SETTINGS.retryBaseDelayMs))
+					.setValue(String(this.plugin.settings.retryBaseDelayMs))
+					.onChange(async (value) => {
+						const parsed = Number(value);
+						const valid = Number.isFinite(parsed) && parsed >= 0 && parsed <= 10000;
+						this.plugin.settings.retryBaseDelayMs = valid
+							? Math.round(parsed)
+							: DEFAULT_SETTINGS.retryBaseDelayMs;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsRetryMaxDelayName'))
+			.setDesc(t('settingsRetryMaxDelayDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(String(DEFAULT_SETTINGS.retryMaxDelayMs))
+					.setValue(String(this.plugin.settings.retryMaxDelayMs))
+					.onChange(async (value) => {
+						const parsed = Number(value);
+						const valid = Number.isFinite(parsed) && parsed >= 0 && parsed <= 30000;
+						this.plugin.settings.retryMaxDelayMs = valid
+							? Math.round(parsed)
+							: DEFAULT_SETTINGS.retryMaxDelayMs;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsRetryJitterRatioName'))
+			.setDesc(t('settingsRetryJitterRatioDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(String(DEFAULT_SETTINGS.retryJitterRatio))
+					.setValue(String(this.plugin.settings.retryJitterRatio))
+					.onChange(async (value) => {
+						const parsed = Number(value);
+						const valid = Number.isFinite(parsed) && parsed >= 0 && parsed <= 0.5;
+						this.plugin.settings.retryJitterRatio = valid
+							? parsed
+							: DEFAULT_SETTINGS.retryJitterRatio;
 						await this.plugin.saveSettings();
 					}),
 			);

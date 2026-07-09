@@ -1,8 +1,5 @@
 import type { TextTranslationProviderId } from './languageCodes';
 
-const CACHE_TTL_MS = 10 * 60 * 1000;
-const CACHE_MAX_ENTRIES = 256;
-
 export interface CacheEntry {
 	result: string;
 	savedAt: number;
@@ -15,16 +12,36 @@ export interface CacheKeyParts {
 	targetLanguage: string;
 }
 
+export interface CacheConfig {
+	enabled: boolean;
+	ttlMs: number;
+	maxEntries: number;
+}
+
+export const DEFAULT_CACHE_CONFIG: CacheConfig = {
+	enabled: true,
+	ttlMs: 10 * 60 * 1000,
+	maxEntries: 256,
+};
+
 export class TranslationCache {
 	private readonly entries = new Map<string, CacheEntry>();
 
+	constructor(
+		private readonly getConfig: () => CacheConfig = () => DEFAULT_CACHE_CONFIG,
+	) {}
+
 	get(parts: CacheKeyParts): CacheEntry | null {
+		const config = this.getConfig();
+		if (!config.enabled) {
+			return null;
+		}
 		const key = buildKey(parts);
 		const entry = this.entries.get(key);
 		if (!entry) {
 			return null;
 		}
-		if (Date.now() - entry.savedAt >= CACHE_TTL_MS) {
+		if (config.ttlMs > 0 && Date.now() - entry.savedAt >= config.ttlMs) {
 			this.entries.delete(key);
 			return null;
 		}
@@ -32,10 +49,14 @@ export class TranslationCache {
 	}
 
 	set(parts: CacheKeyParts, result: string): void {
+		const config = this.getConfig();
+		if (!config.enabled) {
+			return;
+		}
 		const key = buildKey(parts);
 		if (this.entries.has(key)) {
 			this.entries.delete(key);
-		} else if (this.entries.size >= CACHE_MAX_ENTRIES) {
+		} else if (this.entries.size >= config.maxEntries) {
 			const oldest = this.entries.keys().next();
 			if (!oldest.done) {
 				this.entries.delete(oldest.value);

@@ -1,6 +1,6 @@
 import type { TextTranslationProviderId } from './languageCodes';
 
-const MIN_INTERVAL_MS = 1500;
+export const DEFAULT_THROTTLE_MS = 1500;
 
 export class RequestThrottle {
 	private readonly lastSentAt = new Map<TextTranslationProviderId, number>();
@@ -8,20 +8,22 @@ export class RequestThrottle {
 	async wait(
 		provider: TextTranslationProviderId,
 		signal?: AbortSignal,
+		minIntervalMs: number = DEFAULT_THROTTLE_MS,
 	): Promise<void> {
 		if (signal?.aborted) {
 			throw createAbortError();
 		}
 
+		const interval = Math.max(0, minIntervalMs);
 		const now = Date.now();
 		const last = this.lastSentAt.get(provider) ?? 0;
 		const elapsed = now - last;
-		if (elapsed >= MIN_INTERVAL_MS) {
+		if (elapsed >= interval) {
 			this.lastSentAt.set(provider, now);
 			return;
 		}
 
-		const delay = MIN_INTERVAL_MS - elapsed;
+		const delay = interval - elapsed;
 		await waitWithAbort(delay, signal);
 		if (signal?.aborted) {
 			throw createAbortError();

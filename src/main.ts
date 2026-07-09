@@ -7,8 +7,9 @@ import {
 import { t } from './i18n';
 import { TranslationService } from './services/translationService';
 import { resolveTextTranslationProvider } from './services/languageCodes';
-import { TranslationCache } from './services/translationCache';
+import { TranslationCache, type CacheConfig } from './services/translationCache';
 import { RequestThrottle } from './services/requestThrottle';
+import type { RetryConfig } from './services/translationService';
 import {
 	DEFAULT_SETTINGS,
 	LEGACY_DEFAULT_PROMPT,
@@ -33,7 +34,7 @@ export default class SelectionTranslatorPlugin extends Plugin {
 	settings!: SelectionTranslatorSettings;
 	private translator!: TranslationService;
 	private popover!: TranslationPopover;
-	private translationCache = new TranslationCache();
+	private translationCache = new TranslationCache(() => this.buildCacheConfig());
 	private requestThrottle = new RequestThrottle();
 	private currentAbortController: AbortController | null = null;
 	private lastTranslatedSelection = '';
@@ -205,6 +206,24 @@ export default class SelectionTranslatorPlugin extends Plugin {
 		};
 	}
 
+	private buildCacheConfig(): CacheConfig {
+		return {
+			enabled: this.settings.cacheEnabled,
+			ttlMs: this.settings.cacheTtlSeconds * 1000,
+			maxEntries: this.settings.cacheMaxEntries,
+		};
+	}
+
+	private buildRetryConfig(): RetryConfig {
+		return {
+			enabled: this.settings.retryEnabled,
+			maxAttempts: this.settings.retryMaxAttempts,
+			baseDelayMs: this.settings.retryBaseDelayMs,
+			maxDelayMs: this.settings.retryMaxDelayMs,
+			jitterRatio: this.settings.retryJitterRatio,
+		};
+	}
+
 	private async runTranslationTask(task: TranslationTask) {
 		this.stopCurrentTranslation();
 		const abortController = new AbortController();
@@ -217,6 +236,7 @@ export default class SelectionTranslatorPlugin extends Plugin {
 			await this.requestThrottle.wait(
 				resolveTextTranslationProvider(this.settings.provider),
 				abortController.signal,
+				this.settings.throttleMinIntervalMs,
 			);
 			if (abortController.signal.aborted) {
 				return;
@@ -224,6 +244,7 @@ export default class SelectionTranslatorPlugin extends Plugin {
 
 			const result = await this.translator.translate(task.raw, this.settings, {
 				signal: abortController.signal,
+				retryConfig: this.buildRetryConfig(),
 				onChunk: (chunk) => {
 					appendTaskResult(task, chunk);
 					this.popover.update(task, this.getPopoverOptions());

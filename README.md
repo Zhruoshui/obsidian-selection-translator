@@ -77,7 +77,7 @@ The default prompt translates from `Auto` into `Chinese (Simplified)` and return
 
 ## Settings
 
-The settings page is grouped into **Provider**, **Dictionary config**, and **Popover config** tabs.
+The settings page is grouped into **Provider**, **Dictionary config**, **Popover config**, and **Advanced** tabs.
 
 ### Provider
 
@@ -131,6 +131,25 @@ credentials.
 | Setting | Default | Description |
 | --- | --- | --- |
 | Show selected text in popover | enabled | Shows selected text as an editable field before retrying. |
+
+### Advanced
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| Enable cache | enabled | When enabled, repeated translations of the same text within the cache TTL skip the network. |
+| Cache TTL (seconds) | `600` | Time-to-live for a cache entry. `0` means no expiration. Otherwise 60-86400. |
+| Cache max entries | `256` | Maximum cached translations. Oldest entry is dropped first (LRU). |
+| Min interval (ms) | `1500` | Per-provider minimum delay between consecutive translation requests. `0` disables throttling. |
+| Enable retry | enabled | Retries 429/5xx and known rate-limit errors using the backoff below. |
+| Max attempts | `2` | Total attempts including the first one. `0` means no retries at all. |
+| Base delay (ms) | `500` | Initial backoff delay. Subsequent delays double up to the max below. |
+| Max delay (ms) | `3000` | Upper bound on the backoff delay. `baseDelayMs * 2^attempt + jitter` is clamped to this value. |
+| Jitter ratio | `0.2` | Random jitter as a fraction of the exponential delay (0-0.5). |
+
+Provider error responses now carry the HTTP status code as
+`error.cause.status`. The retry loop checks this first (429 or 5xx ⇒ retry);
+if absent, it falls back to the keyword whitelist (`invalid access limit`,
+`rate limit`, etc.) and a numeric-code regex.
 
 ---
 

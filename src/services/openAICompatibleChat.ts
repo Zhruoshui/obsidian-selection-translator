@@ -50,7 +50,7 @@ export class OpenAICompatibleChatService {
 		});
 
 		if (response.status < 200 || response.status >= 300) {
-			throw new Error(getProviderError(response.json, response.text));
+			throw createStatusError(response.status, getProviderError(response.json, response.text));
 		}
 	}
 }
@@ -68,7 +68,7 @@ async function requestChatCompletion(
 	});
 
 	if (response.status < 200 || response.status >= 300) {
-		throw new Error(getProviderError(response.json, response.text));
+		throw createStatusError(response.status, getProviderError(response.json, response.text));
 	}
 
 	const content = getAssistantMessage(response.json);
@@ -100,7 +100,7 @@ async function fetchStreamingTranslation(
 	}
 
 	if (!response.ok) {
-		throw new Error(await getFetchProviderError(response));
+		throw createStatusError(response.status, await getFetchProviderError(response));
 	}
 
 	if (!response.body) {
@@ -387,4 +387,10 @@ function parseJson(text: string) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null;
+}
+
+function createStatusError(status: number, message: string) {
+	const error = new Error(message) as Error & { cause?: { status: number } };
+	error.cause = { status };
+	return error;
 }

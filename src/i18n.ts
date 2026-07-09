@@ -9,6 +9,7 @@ const en = {
 	settingsTabProvider: 'Provider',
 	settingsTabDictionary: 'Dictionary config',
 	settingsTabPopover: 'Popover config',
+	settingsTabAdvanced: 'Advanced',
 	settingsTranslationProviderName: 'Translation provider',
 	settingsTranslationProviderDesc:
 		'Choose the provider used for text translation. One selected English word is looked up in the dictionary automatically.',
@@ -96,6 +97,45 @@ const en = {
 	settingsShowSelectedTextDesc:
 		'Display the selected text as an editable field before translating again.',
 
+	settingsAdvancedCacheHeadingName: 'Translation cache',
+	settingsAdvancedCacheHeadingDesc:
+		'Skip the network when the same text was translated recently.',
+	settingsCacheEnabledName: 'Enable cache',
+	settingsCacheEnabledDesc:
+		'Cache translated text for the duration below. Disable to always hit the network.',
+	settingsCacheTtlName: 'Cache TTL (seconds)',
+	settingsCacheTtlDesc:
+		'How long a cache entry stays valid. 0 = no expiration, 60-86400 seconds otherwise.',
+	settingsCacheMaxEntriesName: 'Cache max entries',
+	settingsCacheMaxEntriesDesc:
+		'Maximum number of cached translations. Oldest entry is dropped first (LRU).',
+
+	settingsAdvancedThrottleHeadingName: 'Request throttle',
+	settingsAdvancedThrottleHeadingDesc:
+		'Enforce a minimum interval between consecutive translation requests per provider.',
+	settingsThrottleMinIntervalName: 'Min interval (ms)',
+	settingsThrottleMinIntervalDesc:
+		'Wait at least this many ms between calls to the same provider. 0 disables throttling.',
+
+	settingsAdvancedRetryHeadingName: 'Retry policy',
+	settingsAdvancedRetryHeadingDesc:
+		'Re-send failed translation requests on 429/5xx or known rate-limit errors.',
+	settingsRetryEnabledName: 'Enable retry',
+	settingsRetryEnabledDesc:
+		'Disabled = first failure is thrown immediately. Enable to use the backoff below.',
+	settingsRetryMaxAttemptsName: 'Max attempts',
+	settingsRetryMaxAttemptsDesc:
+		'Total attempts (including the first one). 0 = no retries at all.',
+	settingsRetryBaseDelayName: 'Base delay (ms)',
+	settingsRetryBaseDelayDesc:
+		'Initial backoff delay. Subsequent delays double up to the max below.',
+	settingsRetryMaxDelayName: 'Max delay (ms)',
+	settingsRetryMaxDelayDesc:
+		'Upper bound on the backoff delay (delay × 2^attempt + jitter, clamped).',
+	settingsRetryJitterRatioName: 'Jitter ratio',
+	settingsRetryJitterRatioDesc:
+		'Random jitter as a fraction of the exponential delay (0-0.5).',
+
 	popoverAriaLabel: 'Selection translation',
 	popoverTitle: 'Selection translation',
 	popoverSelectedText: 'Selected text',
@@ -148,6 +188,7 @@ const zhCN: TranslationDictionary = {
 	settingsTabProvider: '服务商',
 	settingsTabDictionary: '词典配置',
 	settingsTabPopover: '悬浮窗配置',
+	settingsTabAdvanced: '高级',
 	settingsTranslationProviderName: '翻译服务商',
 	settingsTranslationProviderDesc:
 		'选择文本翻译使用的服务商。只选择一个英文单词时会自动走词典查询。',
@@ -231,6 +272,33 @@ const zhCN: TranslationDictionary = {
 	settingsShowSelectedTextName: '在悬浮窗显示选中文本',
 	settingsShowSelectedTextDesc:
 		'将选中文本显示为可编辑输入框，便于修改后重新翻译。',
+
+	settingsAdvancedCacheHeadingName: '翻译缓存',
+	settingsAdvancedCacheHeadingDesc: '相同文本近期翻译过则跳过网络请求。',
+	settingsCacheEnabledName: '启用缓存',
+	settingsCacheEnabledDesc: '将翻译结果在下方时长内缓存。关闭后总是访问网络。',
+	settingsCacheTtlName: '缓存有效期（秒）',
+	settingsCacheTtlDesc: '缓存条目的有效期。0 表示永不过期，否则范围 60-86400 秒。',
+	settingsCacheMaxEntriesName: '缓存最大条目数',
+	settingsCacheMaxEntriesDesc: '最多缓存的翻译数。超出时按 LRU 淘汰最旧条目。',
+
+	settingsAdvancedThrottleHeadingName: '请求节流',
+	settingsAdvancedThrottleHeadingDesc: '同一服务商两次请求之间的最小间隔。',
+	settingsThrottleMinIntervalName: '最小间隔（毫秒）',
+	settingsThrottleMinIntervalDesc: '对同一服务商的两次调用之间至少等待这么多毫秒。0 表示不节流。',
+
+	settingsAdvancedRetryHeadingName: '重试策略',
+	settingsAdvancedRetryHeadingDesc: '在 429/5xx 或已知限流错误时自动重试翻译请求。',
+	settingsRetryEnabledName: '启用重试',
+	settingsRetryEnabledDesc: '关闭后首次失败立即抛出错误。开启后按下方退避参数重试。',
+	settingsRetryMaxAttemptsName: '最大尝试次数',
+	settingsRetryMaxAttemptsDesc: '总尝试次数（含首次）。0 表示完全不重试。',
+	settingsRetryBaseDelayName: '基础延迟（毫秒）',
+	settingsRetryBaseDelayDesc: '初始退避延迟。后续延迟按指数倍增直到上方上限。',
+	settingsRetryMaxDelayName: '最大延迟（毫秒）',
+	settingsRetryMaxDelayDesc: '退避延迟的上限（delay × 2^attempt + jitter，截断到该值）。',
+	settingsRetryJitterRatioName: '抖动比例',
+	settingsRetryJitterRatioDesc: '相对指数延迟的随机抖动比例（0-0.5）。',
 
 	popoverAriaLabel: '划词翻译',
 	popoverTitle: '划词翻译',
