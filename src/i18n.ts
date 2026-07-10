@@ -198,6 +198,48 @@ const en = {
 	popoverQaFailed: 'Q&A failed: {message}',
 	popoverQaDisabledTooltip:
 		'Configure API base URL, API key, and model in AI Q&A settings to enable.',
+	popoverQaSearching: '🔍 Searching "{query}"...',
+	popoverQaFetching: '📄 Reading {url}...',
+	popoverQaToolFailed: '⚠️ Tool "{name}" failed: {message}',
+
+	settingsQaWebSearchHeadingName: 'Web search',
+	settingsQaWebSearchHeadingDesc:
+		'Give AI Q&A the ability to run web searches and fetch pages before answering. Requires a chat model that supports OpenAI-compatible tool_calls.',
+	settingsQaWebSearchEnabledName: 'Enable web search',
+	settingsQaWebSearchEnabledDesc:
+		'When enabled, the AI can call web_search and fetch_url to look up up-to-date information.',
+	settingsQaSearchProviderName: 'Search backend',
+	settingsQaSearchProviderDesc:
+		'Which search API the web_search tool uses. DuckDuckGo works without an API key but is less reliable.',
+	settingsQaSearchProviderTavily: 'Tavily (API key required)',
+	settingsQaSearchProviderSerper: 'Serper.dev (API key required)',
+	settingsQaSearchProviderDuckDuckGo: 'DuckDuckGo (no API key)',
+	settingsQaSearchApiKeyName: 'Search API key',
+	settingsQaSearchApiKeyDesc:
+		'API key for the selected search backend. Stored locally in Obsidian plugin data.',
+	settingsQaSearchApiKeyPlaceholder: 'Search API key',
+	settingsQaMaxIterationsName: 'Maximum tool call rounds',
+	settingsQaMaxIterationsDesc:
+		'Upper bound on how many search / fetch rounds the AI may take before it must finalize an answer.',
+	settingsQaSearchResultLimitName: 'Search results per query',
+	settingsQaSearchResultLimitDesc: 'How many results the web_search tool returns to the model each call.',
+	settingsQaFetchMaxCharsName: 'fetch_url max characters',
+	settingsQaFetchMaxCharsDesc:
+		'Cap on the extracted page text length passed back to the model. Longer pages are truncated.',
+
+	qaSearchMissingApiKey: '{provider} search API key is not configured.',
+	qaSearchProviderFailed: '{provider} search failed: {message}',
+	qaSearchEmptyQuery: 'Search query is empty.',
+	qaSearchNoResults: 'No results.',
+	qaFetchInvalidUrl: 'Invalid URL: {url}',
+	qaFetchBlockedHost: 'Refusing to fetch {url} (host is on the private / local blocklist).',
+	qaFetchUnsupportedProtocol: 'Refusing to fetch {url} (protocol must be http or https).',
+	qaFetchFailed: 'fetch_url failed: {message}',
+	qaFetchEmptyBody: 'The page returned an empty body.',
+	qaFetchTruncated: '\n\n[truncated at {chars} characters]',
+	qaToolUnknownName: 'Unknown tool: {name}',
+	qaToolInvalidArguments: 'Could not parse tool arguments for {name}: {message}',
+	qaLoopAborted: 'AI Q&A was cancelled.',
 
 	dictionaryOnlyEnglishWord:
 		'Select one English word to look it up in the dictionary.',
@@ -401,6 +443,48 @@ const zhCN: TranslationDictionary = {
 	popoverQaThinking: '思考中...',
 	popoverQaFailed: '问答失败：{message}',
 	popoverQaDisabledTooltip: '请在 AI 问答设置中配置 API 基础 URL、API 密钥和模型以启用。',
+	popoverQaSearching: '🔍 正在搜索 "{query}"...',
+	popoverQaFetching: '📄 正在读取 {url}...',
+	popoverQaToolFailed: '⚠️ 工具「{name}」执行失败：{message}',
+
+	settingsQaWebSearchHeadingName: '联网搜索',
+	settingsQaWebSearchHeadingDesc:
+		'为 AI 问答启用联网搜索与网页抓取工具。需要聊天模型支持 OpenAI 兼容的 tool_calls。',
+	settingsQaWebSearchEnabledName: '启用联网搜索',
+	settingsQaWebSearchEnabledDesc:
+		'启用后 AI 可以调用 web_search 与 fetch_url 工具查询最新信息。',
+	settingsQaSearchProviderName: '搜索后端',
+	settingsQaSearchProviderDesc:
+		'web_search 工具使用的搜索 API。DuckDuckGo 无需 API 密钥，但稳定性较差。',
+	settingsQaSearchProviderTavily: 'Tavily（需要 API 密钥）',
+	settingsQaSearchProviderSerper: 'Serper.dev（需要 API 密钥）',
+	settingsQaSearchProviderDuckDuckGo: 'DuckDuckGo（无需 API 密钥）',
+	settingsQaSearchApiKeyName: '搜索 API 密钥',
+	settingsQaSearchApiKeyDesc:
+		'当前所选搜索后端的 API 密钥。本地保存于 Obsidian 插件数据中。',
+	settingsQaSearchApiKeyPlaceholder: '搜索 API 密钥',
+	settingsQaMaxIterationsName: '最大工具调用轮数',
+	settingsQaMaxIterationsDesc:
+		'AI 在给出最终答案之前，最多可以进行多少轮搜索 / 抓取工具调用。',
+	settingsQaSearchResultLimitName: '每次搜索返回结果数',
+	settingsQaSearchResultLimitDesc: 'web_search 工具每次返回给模型的搜索结果条数。',
+	settingsQaFetchMaxCharsName: 'fetch_url 抓取字符上限',
+	settingsQaFetchMaxCharsDesc:
+		'传给模型的网页正文最大字符数，超过则截断。',
+
+	qaSearchMissingApiKey: '尚未配置 {provider} 搜索 API 密钥。',
+	qaSearchProviderFailed: '{provider} 搜索失败：{message}',
+	qaSearchEmptyQuery: '搜索关键词为空。',
+	qaSearchNoResults: '没有搜索结果。',
+	qaFetchInvalidUrl: 'URL 无效：{url}',
+	qaFetchBlockedHost: '拒绝抓取 {url}（主机命中私有 / 本地黑名单）。',
+	qaFetchUnsupportedProtocol: '拒绝抓取 {url}（协议必须为 http 或 https）。',
+	qaFetchFailed: 'fetch_url 执行失败：{message}',
+	qaFetchEmptyBody: '页面返回内容为空。',
+	qaFetchTruncated: '\n\n[已在 {chars} 字符处截断]',
+	qaToolUnknownName: '未知工具：{name}',
+	qaToolInvalidArguments: '无法解析工具 {name} 的参数：{message}',
+	qaLoopAborted: 'AI 问答已中止。',
 
 	dictionaryOnlyEnglishWord: '请选择一个英文单词进行词典查询。',
 	dictionaryNoResult: '词典服务没有返回该单词的释义。',

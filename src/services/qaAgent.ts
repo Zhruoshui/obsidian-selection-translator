@@ -2,8 +2,10 @@ import {
 	type ChatClientConfig,
 	type ChatMessage,
 	type ChatRequestOptions,
-	requestChatCompletion,
+	requestChatText,
 } from './openAIChatClient';
+import { AgentLoop } from './qa/agentLoop';
+import type { QaToolActivityKind, QaToolSettings } from './qa/tools';
 
 export interface QaAgentConfig {
 	apiBaseUrl: string;
@@ -12,11 +14,29 @@ export interface QaAgentConfig {
 	temperature: number;
 	/** System prompt template. May contain a `{selectedText}` placeholder. */
 	systemPrompt: string;
+	/**
+	 * Optional web search configuration. When omitted or `enabled` is false the
+	 * agent falls back to a single-turn chat and never emits `tools` in the
+	 * request body — preserving compatibility with models that don't support
+	 * OpenAI tool_calls.
+	 */
+	webSearch?: QaWebSearchConfig;
+}
+
+export interface QaWebSearchConfig {
+	enabled: boolean;
+	settings: QaToolSettings;
+	maxIterations: number;
 }
 
 export interface QaTurn {
 	role: 'user' | 'assistant';
 	content: string;
+}
+
+export interface QaAskOptions extends ChatRequestOptions {
+	/** Fired when the loop starts a tool (search / fetch). Ignored when web search is disabled. */
+	onToolActivity?: (kind: QaToolActivityKind, detail: string) => void;
 }
 
 /**
@@ -27,12 +47,14 @@ export interface QaTurn {
 export const MAX_HISTORY_PAIRS = 6;
 
 /**
- * Simple built-in Q&A agent. It holds a per-selection conversation (a system
- * message built from the selected text plus recent user/assistant turns) and
- * delegates the actual chat completion to the shared OpenAI-compatible client.
+ * Q&A agent: holds a per-selection conversation (a system message built from
+ * the selected text plus recent user/assistant turns) and dispatches asks to
+ * either a single chat completion (default) or an {@link AgentLoop} with web
+ * search / fetch tools (when {@link QaAgentConfig.webSearch}.enabled is true).
  *
- * There is no tool-calling / ReAct loop and no web or vault search: the agent
- * only answers questions about the currently selected text.
+ * The stored `messages` array only ever contains the system message plus
+ * final user/assistant turns. Intermediate tool_calls / tool messages produced
+ * during an AgentLoop run are discarded so multi-turn history doesn't blow up.
  */
 export class QaAgentService {
 	private messages: ChatMessage[] = [];
@@ -67,14 +89,12 @@ export class QaAgentService {
 	 *
 	 * Trimming runs AFTER the assistant reply is appended, so `trimHistory` only
 	 * ever sees complete user/assistant rounds and the kept context can never
-	 * start with an orphan assistant message. The request itself is bounded
-	 * because `this.messages` is already trimmed to the last
-	 * {@link MAX_HISTORY_PAIRS} rounds from the previous turn.
+	 * start with an orphan assistant message.
 	 */
 	async ask(
 		question: string,
 		config: QaAgentConfig,
-		options: ChatRequestOptions = {},
+		options: QaAskOptions = {},
 	): Promise<string> {
 		// Fresh array handed to the client; this.messages is only updated after
 		// the request resolves so an abort/error leaves prior history intact.
@@ -83,11 +103,7 @@ export class QaAgentService {
 			{ role: 'user', content: question },
 		];
 
-		const answer = await requestChatCompletion(
-			requestMessages,
-			toClientConfig(config),
-			options,
-		);
+		const answer = await runAsk(question, requestMessages, config, options);
 
 		this.messages = trimHistory([
 			...requestMessages,
@@ -95,6 +111,37 @@ export class QaAgentService {
 		]);
 		return answer;
 	}
+}
+
+async function runAsk(
+	_question: string,
+	requestMessages: ChatMessage[],
+	config: QaAgentConfig,
+	options: QaAskOptions,
+): Promise<string> {
+	const webSearch = config.webSearch;
+	if (!webSearch || !webSearch.enabled) {
+		// Fast path preserves the pre-AgentLoop wire format (no tools field at all).
+		return requestChatText(requestMessages, toClientConfig(config), options);
+	}
+	const loop = new AgentLoop();
+	const result = await loop.run(
+		requestMessages,
+		{
+			chat: toClientConfig(config),
+			webSearch: {
+				enabled: true,
+				settings: webSearch.settings,
+			},
+			maxIterations: webSearch.maxIterations,
+		},
+		{
+			signal: options.signal,
+			onAnswerChunk: options.onChunk,
+			onToolActivity: options.onToolActivity,
+		},
+	);
+	return result.answer;
 }
 
 /**

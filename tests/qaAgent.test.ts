@@ -1,14 +1,14 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-// Hoist the mock so the factory can reference it. `requestChatCompletion` is
+// Hoist the mock so the factory can reference it. `requestChatText` is
 // the only runtime value `qaAgent` imports from the shared client, so stubbing
 // it keeps the Q&A tests network-free.
 const mocks = vi.hoisted(() => ({
-	requestChatCompletion: vi.fn(),
+	requestChatText: vi.fn(),
 }));
 
 vi.mock('../src/services/openAIChatClient', () => ({
-	requestChatCompletion: mocks.requestChatCompletion,
+	requestChatText: mocks.requestChatText,
 }));
 
 import {
@@ -89,14 +89,14 @@ describe('trimHistory', () => {
 
 describe('QaAgentService', () => {
 	beforeEach(() => {
-		mocks.requestChatCompletion.mockReset();
+		mocks.requestChatText.mockReset();
 	});
 
 	describe('reset', () => {
 		it('rebuilds the system message with the injected selected text and clears history', async () => {
 			const agent = new QaAgentService();
 			agent.reset('old text', config);
-			mocks.requestChatCompletion.mockResolvedValue('old answer');
+			mocks.requestChatText.mockResolvedValue('old answer');
 			await agent.ask('old question', config);
 			expect(agent.getHistory()).toHaveLength(2);
 
@@ -104,10 +104,10 @@ describe('QaAgentService', () => {
 
 			expect(agent.getHistory()).toEqual([]);
 			// The next request must use a system message built from the new text.
-			mocks.requestChatCompletion.mockResolvedValue('answer');
+			mocks.requestChatText.mockResolvedValue('answer');
 			await agent.ask('q', config);
 
-			const call = mocks.requestChatCompletion.mock.calls.at(-1);
+			const call = mocks.requestChatText.mock.calls.at(-1);
 			const messages = call?.[0] as unknown[];
 			expect(messages[0]).toEqual(
 				systemMessage('Answer questions about: fresh text'),
@@ -120,7 +120,7 @@ describe('QaAgentService', () => {
 		it('drops history but keeps the system message', async () => {
 			const agent = new QaAgentService();
 			agent.reset('selected', config);
-			mocks.requestChatCompletion.mockResolvedValue('answer');
+			mocks.requestChatText.mockResolvedValue('answer');
 			await agent.ask('q1', config);
 
 			expect(agent.getHistory()).toHaveLength(2);
@@ -129,9 +129,9 @@ describe('QaAgentService', () => {
 
 			expect(agent.getHistory()).toEqual([]);
 			// System message survives: the next ask still carries it.
-			mocks.requestChatCompletion.mockResolvedValue('answer2');
+			mocks.requestChatText.mockResolvedValue('answer2');
 			await agent.ask('q2', config);
-			const call = mocks.requestChatCompletion.mock.calls.at(-1);
+			const call = mocks.requestChatText.mock.calls.at(-1);
 			const messages = call?.[0] as unknown[];
 			expect(messages[0]).toEqual(
 				systemMessage('Answer questions about: selected'),
@@ -144,14 +144,14 @@ describe('QaAgentService', () => {
 			const agent = new QaAgentService();
 			agent.reset('ctx', config);
 
-			mocks.requestChatCompletion.mockResolvedValue('the answer');
+			mocks.requestChatText.mockResolvedValue('the answer');
 
 			const result = await agent.ask('what is it?', config);
 
 			expect(result).toBe('the answer');
 			// The request was called with [system, user] (assistant not yet pushed).
-			expect(mocks.requestChatCompletion).toHaveBeenCalledTimes(1);
-			const call = mocks.requestChatCompletion.mock.calls[0];
+			expect(mocks.requestChatText).toHaveBeenCalledTimes(1);
+			const call = mocks.requestChatText.mock.calls[0];
 			const messages = call?.[0] as unknown[];
 			expect(messages).toEqual([
 				systemMessage('Answer questions about: ctx'),
@@ -168,9 +168,9 @@ describe('QaAgentService', () => {
 			const agent = new QaAgentService();
 			agent.reset('ctx', config);
 
-			mocks.requestChatCompletion.mockResolvedValueOnce('a1');
+			mocks.requestChatText.mockResolvedValueOnce('a1');
 			await agent.ask('q1', config);
-			mocks.requestChatCompletion.mockResolvedValueOnce('a2');
+			mocks.requestChatText.mockResolvedValueOnce('a2');
 			await agent.ask('q2', config);
 
 			expect(agent.getHistory()).toEqual([
@@ -181,7 +181,7 @@ describe('QaAgentService', () => {
 			]);
 
 			// The second request carried the first round as context.
-			const secondCall = mocks.requestChatCompletion.mock.calls[1];
+			const secondCall = mocks.requestChatText.mock.calls[1];
 			const messages = secondCall?.[0] as unknown[];
 			expect(messages).toEqual([
 				systemMessage('Answer questions about: ctx'),
@@ -194,7 +194,7 @@ describe('QaAgentService', () => {
 		it('forwards options (signal/onChunk/maxTokens) to the shared client', async () => {
 			const agent = new QaAgentService();
 			agent.reset('ctx', config);
-			mocks.requestChatCompletion.mockResolvedValue('answer');
+			mocks.requestChatText.mockResolvedValue('answer');
 
 			const controller = new AbortController();
 			const onChunk = vi.fn();
@@ -204,7 +204,7 @@ describe('QaAgentService', () => {
 				maxTokens: 128,
 			});
 
-			const call = mocks.requestChatCompletion.mock.calls[0];
+			const call = mocks.requestChatText.mock.calls[0];
 			const options = call?.[2] as Record<string, unknown>;
 			expect(options).toMatchObject({
 				signal: controller.signal,
@@ -216,11 +216,11 @@ describe('QaAgentService', () => {
 		it('passes an isolated ChatClientConfig built from the QaAgentConfig', async () => {
 			const agent = new QaAgentService();
 			agent.reset('ctx', config);
-			mocks.requestChatCompletion.mockResolvedValue('answer');
+			mocks.requestChatText.mockResolvedValue('answer');
 
 			await agent.ask('q', config);
 
-			const call = mocks.requestChatCompletion.mock.calls[0];
+			const call = mocks.requestChatText.mock.calls[0];
 			const clientConfig = call?.[1] as Record<string, unknown>;
 			expect(clientConfig).toEqual({
 				apiBaseUrl: config.apiBaseUrl,
@@ -239,7 +239,7 @@ describe('QaAgentService', () => {
 			// Ask more than MAX_HISTORY_PAIRS rounds.
 			const totalAsks = MAX_HISTORY_PAIRS + 2;
 			for (let i = 0; i < totalAsks; i += 1) {
-				mocks.requestChatCompletion.mockResolvedValueOnce(`a${i}`);
+				mocks.requestChatText.mockResolvedValueOnce(`a${i}`);
 				await agent.ask(`q${i}`, config);
 			}
 
@@ -257,7 +257,7 @@ describe('QaAgentService', () => {
 
 			// The final request carried system + the last MAX_HISTORY_PAIRS prior
 			// rounds + the current question (no orphan assistant at the start).
-			const lastCall = mocks.requestChatCompletion.mock.calls.at(-1);
+			const lastCall = mocks.requestChatText.mock.calls.at(-1);
 			const sentMessages = lastCall?.[0] as unknown[];
 			expect(sentMessages).toHaveLength(MAX_HISTORY_PAIRS * 2 + 2);
 			expect(sentMessages[0]).toEqual(

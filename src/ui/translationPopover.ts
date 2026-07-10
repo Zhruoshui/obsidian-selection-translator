@@ -10,6 +10,11 @@ type CloseHandler = () => void;
 type AskHandler = (question: string) => void;
 type ClearQaHandler = () => void;
 
+interface QaToolActivityEntry {
+	kind: 'search' | 'fetch';
+	detail: string;
+}
+
 export interface TranslationPopoverOptions {
 	showSelectedText: boolean;
 	qaEnabled: boolean;
@@ -45,6 +50,7 @@ export class TranslationPopover {
 		question: string;
 		answer: string;
 		status: 'processing' | 'fail';
+		toolActivities: QaToolActivityEntry[];
 	} | null = null;
 	private qaInputValue = '';
 	private dragState: {
@@ -652,6 +658,9 @@ export class TranslationPopover {
 			historyEl.appendChild(
 				createQaMessage('user', this.qaStreaming.question),
 			);
+			for (const activity of this.qaStreaming.toolActivities) {
+				historyEl.appendChild(createQaToolActivityEl(activity));
+			}
 			const isProcessing = this.qaStreaming.status === 'processing';
 			const assistantEl = createQaMessage(
 				'assistant',
@@ -710,7 +719,12 @@ export class TranslationPopover {
 	}
 
 	appendQaUserMessage(question: string): void {
-		this.qaStreaming = { question, answer: '', status: 'processing' };
+		this.qaStreaming = {
+			question,
+			answer: '',
+			status: 'processing',
+			toolActivities: [],
+		};
 		const historyEl = this.containerEl?.querySelector(
 			'.selection-translator-popover__qa-history',
 		);
@@ -721,6 +735,14 @@ export class TranslationPopover {
 			this.qaExpanded = true;
 			this.rebuildQaSection();
 		}
+	}
+
+	appendQaToolActivity(kind: 'search' | 'fetch', detail: string): void {
+		if (!this.qaStreaming || this.qaStreaming.status !== 'processing') {
+			return;
+		}
+		this.qaStreaming.toolActivities.push({ kind, detail });
+		this.rebuildQaHistory();
 	}
 
 	appendQaChunk(chunk: string): void {
@@ -931,6 +953,16 @@ function createQaMessage(role: 'user' | 'assistant', content: string) {
 	contentEl.textContent = content;
 	messageEl.appendChild(contentEl);
 	return messageEl;
+}
+
+function createQaToolActivityEl(activity: QaToolActivityEntry) {
+	const el = activeDocument.createElement('div');
+	el.className = 'selection-translator-popover__qa-tool';
+	el.textContent =
+		activity.kind === 'search'
+			? t('popoverQaSearching', { query: activity.detail })
+			: t('popoverQaFetching', { url: activity.detail });
+	return el;
 }
 
 function createIconButton(icon: string, label: string) {

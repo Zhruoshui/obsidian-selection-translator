@@ -5,7 +5,7 @@ import {
 import {
 	type ChatClientConfig,
 	type ChatMessage,
-	requestChatCompletion,
+	requestChatText,
 	testChatConnection,
 	validateConfig,
 } from './openAIChatClient';
@@ -35,7 +35,7 @@ export class OpenAICompatibleChatService {
 			},
 		];
 
-		return requestChatCompletion(messages, config, options);
+		return requestChatText(messages, config, options);
 	}
 
 	async testConnection(settings: SelectionTranslatorSettings) {

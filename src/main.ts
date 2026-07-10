@@ -7,6 +7,7 @@ import {
 import { t } from './i18n';
 import { TranslationService } from './services/translationService';
 import { resolveTextTranslationProvider } from './services/languageCodes';
+import { resolveSearchProvider } from './services/qa/search';
 import { TranslationCache, type CacheConfig } from './services/translationCache';
 import { RequestThrottle } from './services/requestThrottle';
 import type { RetryConfig } from './services/translationService';
@@ -128,6 +129,14 @@ export default class SelectionTranslatorPlugin extends Plugin {
 		);
 		if (dictionaryProvider !== this.settings.dictionaryProvider) {
 			this.settings.dictionaryProvider = dictionaryProvider;
+			shouldSaveSettings = true;
+		}
+
+		const qaSearchProvider = resolveSearchProvider(
+			this.settings.qaSearchProvider,
+		);
+		if (qaSearchProvider !== this.settings.qaSearchProvider) {
+			this.settings.qaSearchProvider = qaSearchProvider;
 			shouldSaveSettings = true;
 		}
 
@@ -393,6 +402,18 @@ export default class SelectionTranslatorPlugin extends Plugin {
 			model: this.settings.aiModel,
 			temperature: this.settings.aiTemperature,
 			systemPrompt: this.settings.aiSystemPrompt,
+			webSearch: {
+				enabled: this.settings.qaWebSearchEnabled,
+				settings: {
+					search: {
+						provider: this.settings.qaSearchProvider,
+						apiKey: this.settings.qaSearchApiKey,
+					},
+					searchResultLimit: this.settings.qaSearchResultLimit,
+					fetchMaxChars: this.settings.qaFetchMaxChars,
+				},
+				maxIterations: this.settings.qaMaxToolIterations,
+			},
 		};
 	}
 
@@ -430,6 +451,9 @@ export default class SelectionTranslatorPlugin extends Plugin {
 				signal: abortController.signal,
 				onChunk: (chunk) => {
 					this.popover.appendQaChunk(chunk);
+				},
+				onToolActivity: (kind, detail) => {
+					this.popover.appendQaToolActivity(kind, detail);
 				},
 			});
 			if (abortController.signal.aborted) {

@@ -7,6 +7,11 @@ import {
 	type TextTranslationProviderId,
 	type TranslationProviderId,
 } from './services/languageCodes';
+import {
+	DEFAULT_SEARCH_PROVIDER,
+	resolveSearchProvider,
+	type SearchProviderId,
+} from './services/qa/search';
 
 export type DictionaryProviderId = 'youdao' | 'bing' | 'cambridge';
 
@@ -62,6 +67,12 @@ export interface SelectionTranslatorSettings {
 	aiModel: string;
 	aiSystemPrompt: string;
 	aiTemperature: number;
+	qaWebSearchEnabled: boolean;
+	qaSearchProvider: SearchProviderId;
+	qaSearchApiKey: string;
+	qaMaxToolIterations: number;
+	qaSearchResultLimit: number;
+	qaFetchMaxChars: number;
 }
 
 export const LEGACY_DEFAULT_PROMPT =
@@ -110,6 +121,12 @@ export const DEFAULT_SETTINGS: SelectionTranslatorSettings = {
 	aiModel: '',
 	aiSystemPrompt: AI_DEFAULT_SYSTEM_PROMPT,
 	aiTemperature: 0.3,
+	qaWebSearchEnabled: false,
+	qaSearchProvider: DEFAULT_SEARCH_PROVIDER,
+	qaSearchApiKey: '',
+	qaMaxToolIterations: 3,
+	qaSearchResultLimit: 5,
+	qaFetchMaxChars: 8000,
 };
 
 type SettingsTabId = 'provider' | 'dictionary' | 'popover' | 'advanced' | 'ai-qa';
@@ -882,6 +899,125 @@ export class SelectionTranslatorSettingTab extends PluginSettingTab {
 						}
 					});
 			});
+
+		this.renderQaWebSearchSettings(containerEl);
+	}
+
+	private renderQaWebSearchSettings(containerEl: HTMLElement) {
+		new Setting(containerEl)
+			.setName(t('settingsQaWebSearchHeadingName'))
+			.setDesc(t('settingsQaWebSearchHeadingDesc'));
+
+		new Setting(containerEl)
+			.setName(t('settingsQaWebSearchEnabledName'))
+			.setDesc(t('settingsQaWebSearchEnabledDesc'))
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.qaWebSearchEnabled)
+					.onChange(async (value) => {
+						this.plugin.settings.qaWebSearchEnabled = value;
+						await this.plugin.saveSettings();
+						this.display();
+					}),
+			);
+
+		if (!this.plugin.settings.qaWebSearchEnabled) {
+			return;
+		}
+
+		const provider = resolveSearchProvider(this.plugin.settings.qaSearchProvider);
+
+		new Setting(containerEl)
+			.setName(t('settingsQaSearchProviderName'))
+			.setDesc(t('settingsQaSearchProviderDesc'))
+			.addDropdown((dropdown) => {
+				dropdown.addOption('tavily', t('settingsQaSearchProviderTavily'));
+				dropdown.addOption('serper', t('settingsQaSearchProviderSerper'));
+				dropdown.addOption('duckduckgo', t('settingsQaSearchProviderDuckDuckGo'));
+				dropdown
+					.setValue(provider)
+					.onChange(async (value) => {
+						this.plugin.settings.qaSearchProvider = resolveSearchProvider(value);
+						await this.plugin.saveSettings();
+						this.display();
+					});
+			});
+
+		if (provider !== 'duckduckgo') {
+			new Setting(containerEl)
+				.setName(t('settingsQaSearchApiKeyName'))
+				.setDesc(t('settingsQaSearchApiKeyDesc'))
+				.addText((text) => {
+					text.inputEl.type = 'password';
+					text
+						.setPlaceholder(t('settingsQaSearchApiKeyPlaceholder'))
+						.setValue(this.plugin.settings.qaSearchApiKey)
+						.onChange(async (value) => {
+							this.plugin.settings.qaSearchApiKey = value.trim();
+							await this.plugin.saveSettings();
+						});
+				});
+		}
+
+		new Setting(containerEl)
+			.setName(t('settingsQaMaxIterationsName'))
+			.setDesc(t('settingsQaMaxIterationsDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(String(DEFAULT_SETTINGS.qaMaxToolIterations))
+					.setValue(String(this.plugin.settings.qaMaxToolIterations))
+					.onChange(async (value) => {
+						this.plugin.settings.qaMaxToolIterations = Math.round(
+							normalizeNumber(
+								value,
+								DEFAULT_SETTINGS.qaMaxToolIterations,
+								1,
+								8,
+							),
+						);
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsQaSearchResultLimitName'))
+			.setDesc(t('settingsQaSearchResultLimitDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(String(DEFAULT_SETTINGS.qaSearchResultLimit))
+					.setValue(String(this.plugin.settings.qaSearchResultLimit))
+					.onChange(async (value) => {
+						this.plugin.settings.qaSearchResultLimit = Math.round(
+							normalizeNumber(
+								value,
+								DEFAULT_SETTINGS.qaSearchResultLimit,
+								1,
+								10,
+							),
+						);
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t('settingsQaFetchMaxCharsName'))
+			.setDesc(t('settingsQaFetchMaxCharsDesc'))
+			.addText((text) =>
+				text
+					.setPlaceholder(String(DEFAULT_SETTINGS.qaFetchMaxChars))
+					.setValue(String(this.plugin.settings.qaFetchMaxChars))
+					.onChange(async (value) => {
+						this.plugin.settings.qaFetchMaxChars = Math.round(
+							normalizeNumber(
+								value,
+								DEFAULT_SETTINGS.qaFetchMaxChars,
+								1000,
+								40000,
+							),
+						);
+						await this.plugin.saveSettings();
+					}),
+			);
 	}
 }
 

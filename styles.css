@@ -394,6 +394,15 @@
 	word-break: break-word;
 }
 
+.selection-translator-popover__qa-tool {
+	font-size: var(--font-ui-smaller, 12px);
+	color: var(--text-muted);
+	font-style: italic;
+	padding: 2px 8px;
+	margin: 2px 0;
+	word-break: break-all;
+}
+
 .selection-translator-popover__qa-input {
 	display: flex;
 	align-items: flex-end;
