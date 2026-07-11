@@ -14,7 +14,6 @@
 Selection Translator 是一个 Obsidian 插件，可以使用可自行选择的 AI 或传统翻译服务商翻译 Markdown 编辑器或 PDF 中选中的文本，并自动处理英文单词词典查询。可选的 AI 问答面板支持基于选中文本继续提问；开启联网搜索后，可让模型在回答前进行网页搜索与页面抓取，以获取最新信息。
 
 ![f_start](./img/f_start.png)
-
 ---
 
 ## 功能
@@ -25,6 +24,8 @@ Selection Translator 是一个 Obsidian 插件，可以使用可自行选择的 
 - 悬浮窗保持打开时，继续选择其他 Markdown 或 PDF 文本会自动翻译新的选择。
 - 可以在悬浮窗中编辑源文本后重新翻译。
 - 只选择一个英文单词时会自动使用配置的词典服务商查询，并在可用时播放英音/美音发音。
+
+
 
 ![f_dictionary](./img/f_dictionary.png)
 
@@ -57,6 +58,7 @@ Selection Translator 是一个 Obsidian 插件，可以使用可自行选择的 
 
 ![provider](./img/provider.png)
 
+
 ### AI 问答面板
 
 - 默认关闭。在 **AI 问答** 设置页启用后，翻译浮窗中会出现问答入口。
@@ -65,6 +67,8 @@ Selection Translator 是一个 Obsidian 插件，可以使用可自行选择的 
 - 流式结束后，回答会以 Markdown 渲染（标题、列表、**加粗**、`行内代码`、代码块、链接等）。仅在流式过程中显示原始文本；你的提问和错误信息始终保持纯文本。
 - 切换到新的选区时，问答会话会自动重置。
 
+![AI 问答面板](./img/AI_Panel.png)
+
 ### AI 问答联网搜索（Agent Loop）
 
 - 默认关闭。在 **AI 问答** 页启用 **启用联网搜索** 后，模型在回答前可调用两个工具：
@@ -72,7 +76,6 @@ Selection Translator 是一个 Obsidian 插件，可以使用可自行选择的 
   - `fetch_url`——抓取公开网页并返回正文抽取后的文本。
 - 需要聊天模型支持 OpenAI 兼容的 `tool_calls`。开启后，浮窗会在每一轮工具调用时显示 "🔍 Searching …" / "📄 Reading …" 提示，再流式给出最终答案。
 - 由 **最大工具调用轮数**（默认 `3`）约束。达到上限后，即使模型仍希望继续搜索，插件也会关闭工具强制给出最终答案，保证你一定会收到回复。
-- `fetch_url` 会拒绝非 `http(s)` 协议，以及一份私有 / 本地主机名黑名单（`localhost`、`127.`、`10.`、`192.168.`、`172.16-31.`、`169.254.`、`.local`、`.internal`、IPv6 loopback / link-local / ULA）。这是尽力而为的字符串过滤，并不是完备的 SSRF 防护——详见 [隐私](#隐私)。
 
 ---
 

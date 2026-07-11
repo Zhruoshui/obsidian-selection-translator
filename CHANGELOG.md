@@ -1,11 +1,33 @@
 # Changelog
 
-## 1.3.0 - 2026-07-08
+## 1.3.0 - 2026-07-11
 
 ### English
 
 #### Added
 
+- Added an AI Q&A panel in the translation popover that lets you ask
+  follow-up questions about the selected text. The Q&A tab uses its own
+  OpenAI-compatible chat configuration (base URL / API key / model /
+  temperature / system prompt), fully isolated from the translation
+  provider — you can point translation at one endpoint and Q&A at another.
+  Multi-turn history is bounded to the most recent 6 user/assistant rounds
+  and resets when you switch to a new selection. Off by default; enable it
+  in the **AI Q&A** settings tab.
+- Added an Agent Loop for AI Q&A so the model can call `web_search` and
+  `fetch_url` before answering. `web_search` supports Tavily, Serper.dev,
+  and DuckDuckGo (no API key). `fetch_url` reads a public web page and
+  returns extracted text; it refuses non-`http(s)` URLs and a literal
+  blocklist of private / local hostnames as a best-effort SSRF filter.
+  The popover surfaces one line per tool round ("🔍 Searching …" /
+  "📄 Reading …"). Bounded by the **Maximum tool call rounds** setting
+  (default `3`); after the cap the plugin forces a final answer with tools
+  disabled so a reply always arrives. Requires a chat model that supports
+  OpenAI-compatible `tool_calls`.
+- Render AI Q&A answers as Markdown once streaming completes — headings,
+  lists, **bold**, `inline code`, code blocks, and links. Raw text is shown
+  only during the streaming phase; your own questions and error messages
+  stay plain text.
 - Provider errors now carry the HTTP status code as `error.cause.status`, so
   the retry loop can decide based on the real response status instead of
   relying solely on the `Invalid Access Limit` keyword whitelist. Keywords
@@ -26,6 +48,9 @@
 
 #### 新增
 
+- 在翻译悬浮窗中新增 AI 问答面板，可基于选中文本继续追问。问答功能使用独立的 OpenAI 兼容聊天配置（Base URL / API Key / 模型 / 温度 / 系统提示词），与翻译服务商完全隔离——翻译和问答可以指向不同的接口。多轮对话最多保留最近 6 轮用户/助手消息，切换新选区自动重置。默认关闭，在 **AI 问答** 设置标签页开启。
+- 新增 AI 问答 Agent Loop，模型在回答前可调用 `web_search` 与 `fetch_url` 两个工具。`web_search` 支持 Tavily、Serper.dev、DuckDuckGo（无需 API Key）；`fetch_url` 抓取公开网页正文，拒绝非 `http(s)` 协议及私有/本地主机名黑名单（尽力而为的 SSRF 过滤）。悬浮窗会在每一轮工具调用时显示 "🔍 Searching …" / "📄 Reading …" 提示。由 **最大工具调用轮数**（默认 `3`）约束，超限后关闭工具强制给出最终答复，确保一定收到回复。需要聊天模型支持 OpenAI 兼容的 `tool_calls`。
+- AI 问答的最终回答在流式结束后按 Markdown 渲染（标题、列表、**加粗**、`行内代码`、代码块、链接）；流式过程中仍显示原始文本，用户提问和错误信息保持纯文本。
 - 翻译服务商错误现在通过 `error.cause.status` 透传 HTTP 状态码，重试循环优先依据真实状态码判断是否重试，不再仅依赖 `Invalid Access Limit` 等关键词白名单。关键词和 `code:NNN`/`status:NNN`/`http:NNN` 正则仍作为兜底，用于错误消息不含数字状态码的服务商。悬浮窗中用户可见的错误消息文案不变。
 - 新增「高级」设置标签页，将缓存、节流、重试三组参数暴露为可配置项。默认值与 1.2.0 写死常量一致，存量安装不受影响。设置变更会清空翻译缓存，并在下次请求时生效。
 - 新增 `vitest` + `happy-dom` 测试框架，覆盖 `isRetryableError`、`withRetry`、`TranslationCache`、`RequestThrottle` 和 `textNormalize`（共 27 个 case）。本地运行 `npm run test` 即可；CI 仍只跑构建。

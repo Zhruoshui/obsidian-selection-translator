@@ -65,6 +65,8 @@ Selection Translator is an Obsidian plugin for translating selected Markdown edi
 - Once streaming finishes, the answer is rendered as Markdown (headings, lists, **bold**, `inline code`, code blocks, and links). Raw text is shown only while streaming; your own questions and error messages stay plain text.
 - The Q&A conversation resets automatically when you switch to a new selection.
 
+![AI Q&A Panel](./img/AI_Panel.png)
+
 ### AI Q&A Web Search (Agent Loop)
 
 - Off by default. Toggle **Enable web search** in the **AI Q&A** tab to let the model call two tools before answering:
@@ -72,7 +74,6 @@ Selection Translator is an Obsidian plugin for translating selected Markdown edi
   - `fetch_url` — reads a public web page and returns its extracted text.
 - Requires a chat model that supports OpenAI-compatible `tool_calls`. When enabled the popover shows a "🔍 Searching …" / "📄 Reading …" line for each tool round, then streams the final answer.
 - Bounded by the **Maximum tool call rounds** setting (default `3`). If the model still wants to keep searching after the cap, the plugin forces a final answer with tools disabled so you always get a reply.
-- `fetch_url` refuses non-`http(s)` URLs and a literal blocklist of private / local hostnames (`localhost`, `127.`, `10.`, `192.168.`, `172.16-31.`, `169.254.`, `.local`, `.internal`, IPv6 loopback / link-local / ULA). This is a best-effort string filter, not a full SSRF defence — see [Privacy](#privacy).
 
 ---
 
