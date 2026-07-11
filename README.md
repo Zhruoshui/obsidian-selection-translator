@@ -62,6 +62,7 @@ Selection Translator is an Obsidian plugin for translating selected Markdown edi
 - Off by default. Toggle **Enable AI Q&A** in the **AI Q&A** settings tab to show the Q&A entry in the translation popover.
 - Uses its own OpenAI-compatible chat configuration (base URL / API key / model / temperature / system prompt), fully isolated from the translation provider — you can point translation at one endpoint and Q&A at another.
 - Streams the answer in the popover. Multi-turn history is bounded to the most recent 6 user/assistant rounds; older turns are dropped automatically.
+- Once streaming finishes, the answer is rendered as Markdown (headings, lists, **bold**, `inline code`, code blocks, and links). Raw text is shown only while streaming; your own questions and error messages stay plain text.
 - The Q&A conversation resets automatically when you switch to a new selection.
 
 ### AI Q&A Web Search (Agent Loop)
