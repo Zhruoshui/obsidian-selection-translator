@@ -1,4 +1,4 @@
-import { Notice, setIcon } from 'obsidian';
+import { App, Component, MarkdownRenderer, Notice, setIcon } from 'obsidian';
 import { t } from '../i18n';
 import type { QaTurn } from '../services/qaAgent';
 import type {
@@ -64,6 +64,7 @@ export class TranslationPopover {
 		startY: number;
 	} | null = null;
 	private resizeEventWindow: Window | null = null;
+	private markdownComponent: Component | null = null;
 	private readonly handleWindowResize = () => {
 		if (!this.containerEl) {
 			return;
@@ -74,6 +75,7 @@ export class TranslationPopover {
 	};
 
 	constructor(
+		private readonly app: App,
 		private readonly onRetry: (sourceText: string) => void,
 		private readonly onClose: CloseHandler,
 		private readonly onAsk: AskHandler,
@@ -109,6 +111,8 @@ export class TranslationPopover {
 			this.handleWindowResize,
 		);
 		this.resizeEventWindow = null;
+		this.markdownComponent?.unload();
+		this.markdownComponent = null;
 		this.containerEl?.remove();
 		this.containerEl = null;
 		this.currentTask = null;
@@ -150,6 +154,10 @@ export class TranslationPopover {
 		});
 		activeDocument.body.appendChild(container);
 		this.containerEl = container;
+		if (!this.markdownComponent) {
+			this.markdownComponent = new Component();
+			this.markdownComponent.load();
+		}
 		this.resizeEventWindow = activeWindow;
 		this.resizeEventWindow.addEventListener('resize', this.handleWindowResize);
 	}
@@ -652,7 +660,21 @@ export class TranslationPopover {
 
 	private populateQaHistory(historyEl: Element) {
 		for (const turn of this.qaHistory) {
-			historyEl.appendChild(createQaMessage(turn.role, turn.content));
+			const messageEl = createQaMessage(turn.role, turn.content);
+			if (turn.role === 'assistant' && this.markdownComponent) {
+				const contentEl = messageEl.querySelector<HTMLElement>(
+					'.selection-translator-popover__qa-message-content',
+				);
+				if (contentEl) {
+					renderQaAssistantMarkdown(
+						this.app,
+						this.markdownComponent,
+						contentEl,
+						turn.content,
+					);
+				}
+			}
+			historyEl.appendChild(messageEl);
 		}
 		if (this.qaStreaming) {
 			historyEl.appendChild(
@@ -762,15 +784,29 @@ export class TranslationPopover {
 		if (this.qaStreaming?.status !== 'processing') {
 			return;
 		}
+		const finalAnswer = this.qaStreaming.answer;
 		const streamingEl = this.containerEl?.querySelector(
 			'.selection-translator-popover__qa-message--streaming',
 		);
 		streamingEl?.classList.remove(
 			'selection-translator-popover__qa-message--streaming',
 		);
+		if (streamingEl && this.markdownComponent) {
+			const contentEl = streamingEl.querySelector<HTMLElement>(
+				'.selection-translator-popover__qa-message-content',
+			);
+			if (contentEl) {
+				renderQaAssistantMarkdown(
+					this.app,
+					this.markdownComponent,
+					contentEl,
+					finalAnswer,
+				);
+			}
+		}
 		this.qaHistory.push(
 			{ role: 'user', content: this.qaStreaming.question },
-			{ role: 'assistant', content: this.qaStreaming.answer },
+			{ role: 'assistant', content: finalAnswer },
 		);
 		this.qaStreaming = null;
 		this.updateQaClearButton();
@@ -953,6 +989,28 @@ function createQaMessage(role: 'user' | 'assistant', content: string) {
 	contentEl.textContent = content;
 	messageEl.appendChild(contentEl);
 	return messageEl;
+}
+
+function renderQaAssistantMarkdown(
+	app: App,
+	component: Component,
+	contentEl: HTMLElement,
+	markdown: string,
+): void {
+	contentEl.empty();
+	contentEl.classList.add(
+		'selection-translator-popover__qa-message-content--markdown',
+	);
+	// MarkdownRenderer.render is async; we don't await it — the caller only
+	// needs the DOM to be reasonably filled. If it rejects for any reason
+	// (unexpected Obsidian error), fall back to plain text so the answer is
+	// never lost.
+	void MarkdownRenderer.render(app, markdown, contentEl, '', component).catch(
+		() => {
+			contentEl.empty();
+			contentEl.textContent = markdown;
+		},
+	);
 }
 
 function createQaToolActivityEl(activity: QaToolActivityEntry) {

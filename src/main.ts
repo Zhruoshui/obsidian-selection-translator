@@ -59,6 +59,7 @@ export default class SelectionTranslatorPlugin extends Plugin {
 
 		this.translator = new TranslationService();
 		this.popover = new TranslationPopover(
+			this.app,
 			(sourceText) => {
 				void this.translateText(sourceText, true);
 			},

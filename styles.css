@@ -439,3 +439,63 @@
 	justify-content: center;
 	cursor: pointer;
 }
+
+.selection-translator-popover__qa-message-content--markdown {
+	display: block;
+	line-height: 1.5;
+}
+
+.selection-translator-popover__qa-message-content--markdown > *:first-child {
+	margin-top: 0;
+}
+
+.selection-translator-popover__qa-message-content--markdown > *:last-child {
+	margin-bottom: 0;
+}
+
+.selection-translator-popover__qa-message-content--markdown p {
+	margin: 0.15em 0;
+}
+
+.selection-translator-popover__qa-message-content--markdown h1,
+.selection-translator-popover__qa-message-content--markdown h2,
+.selection-translator-popover__qa-message-content--markdown h3,
+.selection-translator-popover__qa-message-content--markdown h4,
+.selection-translator-popover__qa-message-content--markdown h5,
+.selection-translator-popover__qa-message-content--markdown h6 {
+	margin: 0.4em 0 0.15em;
+	line-height: 1.25;
+}
+
+.selection-translator-popover__qa-message-content--markdown ul,
+.selection-translator-popover__qa-message-content--markdown ol {
+	margin: 0.15em 0;
+	padding-left: 1.4em;
+}
+
+.selection-translator-popover__qa-message-content--markdown li {
+	margin: 0;
+}
+
+.selection-translator-popover__qa-message-content--markdown li > p {
+	margin: 0;
+}
+
+.selection-translator-popover__qa-message-content--markdown blockquote {
+	margin: 0.25em 0;
+	padding: 0.1em 0.8em;
+}
+
+.selection-translator-popover__qa-message-content--markdown pre {
+	max-width: 100%;
+	margin: 0.25em 0;
+	overflow-x: auto;
+}
+
+.selection-translator-popover__qa-message-content--markdown code {
+	word-break: break-word;
+}
+
+.selection-translator-popover__qa-message-content--markdown hr {
+	margin: 0.4em 0;
+}
