@@ -11,7 +11,7 @@
 [FAQ](#faq) |
 [Development](#development)
 
-Selection Translator is an Obsidian plugin for translating selected Markdown editor and PDF text with selectable AI and traditional translation providers plus automatic dictionary lookup.
+Selection Translator is an Obsidian plugin for translating selected Markdown editor and PDF text with selectable AI and traditional translation providers plus automatic dictionary lookup. An optional AI Q&A panel lets you ask follow-up questions about the selected text, with optional web search and page fetching for up-to-date answers.
 
 ![f_start](./img/f_start.png)
 
@@ -57,6 +57,22 @@ Selection Translator is an Obsidian plugin for translating selected Markdown edi
 
 ![provider](./img/provider.png)
 
+### AI Q&A Panel
+
+- Off by default. Toggle **Enable AI Q&A** in the **AI Q&A** settings tab to show the Q&A entry in the translation popover.
+- Uses its own OpenAI-compatible chat configuration (base URL / API key / model / temperature / system prompt), fully isolated from the translation provider — you can point translation at one endpoint and Q&A at another.
+- Streams the answer in the popover. Multi-turn history is bounded to the most recent 6 user/assistant rounds; older turns are dropped automatically.
+- The Q&A conversation resets automatically when you switch to a new selection.
+
+### AI Q&A Web Search (Agent Loop)
+
+- Off by default. Toggle **Enable web search** in the **AI Q&A** tab to let the model call two tools before answering:
+  - `web_search` — one of Tavily, Serper.dev, or DuckDuckGo (no API key).
+  - `fetch_url` — reads a public web page and returns its extracted text.
+- Requires a chat model that supports OpenAI-compatible `tool_calls`. When enabled the popover shows a "🔍 Searching …" / "📄 Reading …" line for each tool round, then streams the final answer.
+- Bounded by the **Maximum tool call rounds** setting (default `3`). If the model still wants to keep searching after the cap, the plugin forces a final answer with tools disabled so you always get a reply.
+- `fetch_url` refuses non-`http(s)` URLs and a literal blocklist of private / local hostnames (`localhost`, `127.`, `10.`, `192.168.`, `172.16-31.`, `169.254.`, `.local`, `.internal`, IPv6 loopback / link-local / ULA). This is a best-effort string filter, not a full SSRF defence — see [Privacy](#privacy).
+
 ---
 
 ## Quick Start
@@ -77,7 +93,7 @@ The default prompt translates from `Auto` into `Chinese (Simplified)` and return
 
 ## Settings
 
-The settings page is grouped into **Provider**, **Dictionary config**, **Popover config**, and **Advanced** tabs.
+The settings page is grouped into **Provider**, **Dictionary config**, **Popover config**, **Advanced**, and **AI Q&A** tabs.
 
 ### Provider
 
@@ -151,6 +167,45 @@ Provider error responses now carry the HTTP status code as
 if absent, it falls back to the keyword whitelist (`invalid access limit`,
 `rate limit`, etc.) and a numeric-code regex.
 
+### AI Q&A
+
+The AI Q&A tab holds an OpenAI-compatible chat configuration that is fully
+isolated from the translation provider. Turn the feature off to hide the Q&A
+entry from the popover entirely.
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| Enable AI Q&A | disabled | Shows the AI Q&A entry in the translation popover. |
+| AI API base URL | `https://api.openai.com/v1` | Base URL for the OpenAI-compatible chat API used by Q&A. |
+| AI API key | empty | Bearer token for the chat endpoint. Stored locally in Obsidian plugin data. |
+| AI model | empty | Model name your endpoint supports. |
+| AI temperature | `0.2` | Lower values keep answers more deterministic. |
+| AI system prompt | built in | Prompt template. Use `{selectedText}` where the selected text should be inserted; if omitted the selected text is appended automatically. |
+| Test AI configuration | - | Sends a short chat request to verify the endpoint / key / model. |
+
+#### Web Search
+
+Below the AI Q&A settings is a **Web search** section that lets the Q&A
+agent call `web_search` and `fetch_url` before answering. Requires a chat
+model that supports OpenAI-compatible `tool_calls`. When disabled, no
+`tools` field is sent — the wire format is identical to a plain chat
+completion.
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| Enable web search | disabled | Turns on the Agent Loop. When off, all fields below are hidden. |
+| Search backend | `DuckDuckGo (no API key)` | Which search API the `web_search` tool uses. Options: Tavily, Serper.dev, DuckDuckGo. |
+| Search API key | empty | Required for Tavily / Serper.dev. Hidden when DuckDuckGo is selected. |
+| Maximum tool call rounds | `3` | Upper bound on tool-executing rounds. After the cap the plugin forces one final answer with tools disabled. Range 1-8. |
+| Search results per query | `5` | How many results `web_search` returns to the model per call. Range 1-10. |
+| `fetch_url` max characters | `8000` | Cap on the extracted page text length passed back to the model. Longer pages are truncated with a marker. Range 1000-40000. |
+
+| Search backend | API access note | Key setup | Pricing |
+| --- | --- | --- | --- |
+| Tavily | Purpose-built LLM search API. Free tier available; API key required. | [Tavily docs](https://docs.tavily.com/) | [Tavily pricing](https://tavily.com/#pricing) |
+| Serper.dev | Google search results via a REST API. Free tier available; API key required. | [Serper.dev docs](https://serper.dev/) | [Serper.dev pricing](https://serper.dev/pricing) |
+| DuckDuckGo | Parses the public HTML endpoint (`https://html.duckduckgo.com/html/`). No API key. Less reliable and may rate-limit heavy use. | - | - |
+
 ---
 
 ## Usage Guide
@@ -180,6 +235,21 @@ Select the ribbon button before selecting text. The popover opens in a waiting s
 
 PDF support requires a selectable PDF text layer. Scanned pages without OCR text cannot be translated by selection.
 
+### AI Q&A About The Selection
+
+1. Enable **AI Q&A** in settings and fill in the API base URL, API key, and model.
+2. Translate a selection to open the popover.
+3. Open the **AI Q&A** entry, type a follow-up question about the selected text, and send.
+4. The answer streams in the popover. Continue asking to build a multi-turn conversation about the same selection; the most recent 6 rounds are retained as context.
+5. Switching to a new selection resets the conversation.
+
+### AI Q&A With Web Search
+
+1. In the **AI Q&A** tab, enable **Web search** and pick a **Search backend** (fill in the search API key if Tavily / Serper.dev).
+2. Ask a question that benefits from up-to-date information ("what did X announce today?").
+3. The popover shows one line per tool call — `🔍 Searching "…"` or `📄 Reading …` — while the model runs the Agent Loop, then streams the final answer.
+4. If the model keeps calling tools past **Maximum tool call rounds**, the plugin forces a final answer with tools disabled — you always get a reply.
+
 ---
 
 ## Privacy
@@ -187,6 +257,10 @@ PDF support requires a selectable PDF text layer. Scanned pages without OCR text
 This plugin does not collect telemetry and does not scan your vault.
 
 When you translate selected Markdown or PDF text, only the selected text is sent to the translation provider currently selected in plugin settings. When the selection is one English word, that word is sent to the configured dictionary provider instead and pronunciation audio is loaded from that provider when available. Do not translate sensitive content unless you trust that provider.
+
+When you use AI Q&A, the selected text and the questions you type are sent to the AI chat endpoint configured in the **AI Q&A** tab (independent of the translation provider). When web search is enabled, your search queries are additionally sent to the selected search backend (Tavily / Serper.dev / DuckDuckGo), and if the model calls `fetch_url` the plugin issues an HTTP GET against that public URL from your Obsidian process. The plugin does not send anything from your vault beyond the selected text, your questions, and URLs the model chooses to fetch.
+
+`fetch_url` refuses non-`http(s)` URLs and rejects a literal-string blocklist of private / local hostnames. It is a best-effort filter — Obsidian's plugin sandbox has no DNS resolution API, so it does **not** protect against DNS rebinding or decimal-encoded IPv4 literals. If your threat model requires strong egress control, run the plugin behind an outbound proxy that enforces policy at the network layer.
 
 Provider credentials are stored locally in Obsidian plugin data through `saveData()`. Secret fields are rendered as password fields in settings, but Obsidian plugin data is local plaintext storage, not encrypted storage. The plugin does not log provider credentials.
 
